@@ -1,6 +1,15 @@
 /**
+ * @import {
+ *   ArithmeticInfixOperator, 
+ *   ArithmeticUnaryOperator, 
+ *   BitwiseInfixOperator, BitwiseUnaryOperator, 
+ *   NumericComparisonOperator
+ * } from "./types"
+ */
+
+/**
  * The minimum value for an 8-bit signed integer.
- * @type {number}
+ * @type {-128}
  * @constant
  */
 export const I8_MIN = -128;
@@ -166,3 +175,40 @@ export const F64_MAX_SAFE_INTEGER = 9007199254740991;
  * @constant
  */
 export const F64_EPSILON = 2.2204460492503131e-16;
+
+/**
+ * @type {ArithmeticInfixOperator[]}
+ * @constant
+ */
+export const ARITHMETIC_INFIX_OPERATORS = ["+", "-", "*", "/", "%", "%%", "**"];
+
+/**
+ * @type {ArithmeticUnaryOperator[]}
+ * @constant
+ */
+export const ARITHMETIC_UNARY_OPERATORS = ["-", "+"];
+
+/**
+ * @type {BitwiseInfixOperator[]}
+ * @constant
+ */
+export const BITWISE_INFIX_OPERATORS = ["&", "|", "^", "<<", ">>", ">>>"];
+
+/**
+ * @type {BitwiseUnaryOperator[]}
+ * @constant
+ */
+export const BITWISE_UNARY_OPERATORS = ["~"];
+
+/**
+ * @type {NumericComparisonOperator[]}
+ * @constant
+ */
+export const NUMERIC_COMPARISON_OPERATORS = [
+  "==",
+  "!=",
+  "<",
+  ">",
+  "<=",
+  ">="
+];

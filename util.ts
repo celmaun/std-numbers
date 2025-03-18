@@ -22,6 +22,9 @@ import {
   f32,
   f64,
   BigIntCastable,
+  CompareMath,
+  IntType,
+  UintType,
 } from "./types";
 
 export type ClassOf =
@@ -149,7 +152,7 @@ export const defineStatic = <
 
 export const defineMembers = <
   T extends {},
-  U extends Readonly<Record<string | symbol, any>>,
+  const U extends Readonly<Record<string | symbol, any>>,
   V extends Record<string | symbol, any>
 >(
   target: T,
@@ -174,6 +177,74 @@ export const nonEnumerable = <T extends Record<string | symbol, any>>(
 
   return object;
 };
+
+// Preserve the names of functions through minification.
+export const preserveNames = <const T extends Record<string, Function>>(record: T): T {
+  for (const [name, func] of Object.entries(record)) {
+    if ((typeof func === "function") && (func.name !== name)) {
+      Object.defineProperty(func, "name", { value: name });
+    }
+  }
+
+  return record;
+}
+
+export const createComparisonMethods = <T>(compare: (left: T, right: T) => -1 | 0 | 1): CompareMath<T> => {
+  return {
+    eq(left: T, right: T): boolean {
+      return compare(left, right) === 0;
+    },
+
+    neq(left: T, right: T): boolean {
+      return compare(left, right) !== 0;
+    },
+
+    lt(left: T, right: T): boolean {
+      return compare(left, right) === -1;
+    },
+
+    lte(left: T, right: T): boolean {
+      return compare(left, right) !== 1;
+    },
+
+    gt(left: T, right: T): boolean {
+      return compare(left, right) === 1;
+    },
+
+    gte(left: T, right: T): boolean {
+      return compare(left, right) !== -1;
+    },
+  };
+}
+
+export const isIntType = (value: unknown): value is IntType => {
+  if (typeof value === "number") {
+    if (value === 0) {
+      return Object.is(value, 0);
+    }
+
+    return (value === (value | 0)) || (value === (value >>> 0));
+  }
+
+  if (typeof value === "bigint") {
+    return value >= I64_MIN && value <= I64_MAX;
+  }
+
+  return false;
+}
+
+export const isUintType = (value: unknown): value is UintType => {
+  if (typeof value === "number") {
+    return (value === 0) ? Object.is(value, 0) : (value === (value >>> 0));
+  }
+
+  if (typeof value === "bigint") {
+    return value >= 0n && value <= U64_MAX;
+  }
+
+  return false;
+}
+
 
 // Is `value` an 8-bit signed integer?
 export const isInt8 = (value: unknown): value is i8 => {
@@ -361,3 +432,31 @@ export const isFloat64 = (value: unknown): value is f64 => {
 export const asFloat64 = (value: unknown): f64 => {
   return Number(value) as any as f64;
 };
+
+preserveNames({
+  defineReadonly,
+  defineStatic,
+  defineMembers,
+  nonEnumerable,
+  preserveNames,
+  isInt8,
+  asInt8,
+  isUint8,
+  asUint8,
+  isInt16,
+  asInt16,
+  isUint16,
+  asUint16,
+  isInt32,
+  asInt32,
+  isUint32,
+  asUint32,
+  isBigInt64,
+  asBigInt64,
+  isBigUint64,
+  asBigUint64,
+  isFloat32,
+  asFloat32,
+  isFloat64,
+  asFloat64,
+});

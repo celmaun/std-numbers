@@ -1,0 +1,51 @@
+node_modules
+dist
+.DS_Store
+*.log
+
+# IDEs and Editors
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Temporary files
+*~
+\#*#
+.*.swp
+.*.swo
+
+# Dependency managers
+# yarn-error.log
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Coverage
+coverage
+*.lcov
+
+# Build output
+build
+out
+tmp
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS generated files
+Thumbs.db
+
+# Specific to Babel macros
+**/__fixtures__
+**/__snapshots__
+
+# ESLint cache
+.eslintcache
+
+# TypeScript cache
+*.tsbuildinfo
