@@ -179,7 +179,7 @@ export const nonEnumerable = <T extends Record<string | symbol, any>>(
 };
 
 // Preserve the names of functions through minification.
-export const preserveNames = <const T extends Record<string, Function>>(record: T): T {
+export const preserveNames = <const T extends Record<string, Function>>(record: T): T => {
   for (const [name, func] of Object.entries(record)) {
     if ((typeof func === "function") && (func.name !== name)) {
       Object.defineProperty(func, "name", { value: name });

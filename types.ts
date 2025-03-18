@@ -1,26 +1,26 @@
-export type i8 = (Number & { ["#Int8"]: unique symbol }) | 0 | -1 | 1;
+export type i8 = (Number & { readonly ["#Int8"]: unique symbol }) | 0 | -1 | 1;
 export type i16 =
-  | (Number & { ["#Int16"]: unique symbol })
+  | (Number & { readonly ["#Int16"]: unique symbol })
   | 0
   | -1
-  | 1;
+  | 1
   | 16;
 export type i32 =
-  | (Number & { ["#Int32"]: unique symbol })
+  | (Number & { readonly ["#Int32"]: unique symbol })
   | 0
   | -1
   | 1
   | 32;
 // export type Int32 = i32;
 
-export type u8 = (Number & { ["#Uint8"]: unique symbol }) | 0 | 1 | 8 | 255;
-export type u16 = (Number & { ["#Uint16"]: unique symbol }) | 0 | 1 | 16 | 65535;
-export type u32 = (Number & { ["#Uint32"]: unique symbol }) | 0 | 1 | 32 | 4294967295;
+export type u8 = (Number & { readonly ["#Uint8"]: unique symbol }) | 0 | 1 | 8 | 255;
+export type u16 = (Number & { readonly ["#Uint16"]: unique symbol }) | 0 | 1 | 16 | 65535;
+export type u32 = (Number & { readonly ["#Uint32"]: unique symbol }) | 0 | 1 | 32 | 4294967295;
 // export type Uint32 = u32;
 
-export type f32 = Number & { ["#Float32"]: unique symbol };
+export type f32 = Number & { readonly ["#Float32"]: unique symbol };
 // export type Float32 = f32;
-export type f64 = Number & { ["#Float64"]: unique symbol };
+export type f64 = Number & { readonly ["#Float64"]: unique symbol };
 // export type Float64 = f64;
 
 export type NumberCastable = number | i32 | u32 | string | boolean;
@@ -40,7 +40,7 @@ export type BigIntCastable =
   | string;
 
 export type i64 =
-  | (BigInt & { ["#BigInt64"]: unique symbol })
+  | (BigInt & { readonly ["#BigInt64"]: unique symbol })
   | 0n
   | -1n
   | 1n
@@ -49,7 +49,7 @@ export type i64 =
 // export type BigInt64 = i64;
 
 export type u64 =
-  | (BigInt & { ["#BigUint64"]: unique symbol })
+  | (BigInt & { readonly ["#BigUint64"]: unique symbol })
   | 0n
   | 1n;
 
@@ -155,12 +155,13 @@ export interface UintMath<T> extends IntMath<T> {
 
 export type I64_Compareable = i8 | u8 | i16 | u16 | i32 | u32 | i64 | u64;
 
-export type i64TemplateUnary =
+export type I64_TemplateUnary =
   | TemplateStringsArray
-  | [SpacedNumericUnaryOperator, ""];
-export type i64TemplateInfix =
+  | [NumericUnaryOperator, ""]
+
+export type I64_TemplateInfix =
   | TemplateStringsArray
-  | ["", SpacedNumericInfixOperator, ""];
+  | ["", `${' ' | ''}${NumericInfixOperator}${'' | ' '}`, ""];
 
 export interface i64Constructor extends IntMath<i64> {
   readonly MIN_VALUE: -9223372036854775808n;
@@ -169,12 +170,12 @@ export interface i64Constructor extends IntMath<i64> {
   (arg0: BigIntCastable): i64;
 
   (arg0: TemplateStringsArray): i64;
-  (arg0: i64TemplateUnary, arg1?: BigIntCastable): i64;
-  (arg0: i64TemplateInfix, arg1?: BigIntCastable, arg2?: BigIntCastable): i64;
+  (arg0: I64_TemplateUnary, arg1?: BigIntCastable): i64;
+  (arg0: I64_TemplateInfix, arg1?: BigIntCastable, arg2?: BigIntCastable): i64;
 
   tag(arg0: TemplateStringsArray): i64;
-  tag(arg0: i64TemplateUnary, arg1?: BigIntCastable): i64;
-  tag(tsa: i64TemplateInfix, arg1?: BigIntCastable, arg2?: BigIntCastable): i64;
+  tag(arg0: I64_TemplateUnary, arg1?: BigIntCastable): i64;
+  tag(tsa: I64_TemplateInfix, arg1?: BigIntCastable, arg2?: BigIntCastable): i64;
 
   readonly prototype: i64;
   is(value: unknown): value is i64;

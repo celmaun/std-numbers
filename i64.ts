@@ -7,27 +7,12 @@ import type {
   SpacedNumericUnaryOperator,
   i64Constructor,
   i64,
-  i64TemplateInfix as i64TemplateInfix,
-  i64TemplateUnary,
-  SpacedNumericComparisonOperator,
+  I64_TemplateInfix,
+  I64_TemplateUnary,
   NumericComparisonOperator,
-  IntType,
-  i16,
-  i32,
-  i8,
-  u16,
-  u32,
-  u64,
-  u8,
   I64_Compareable,
 } from "./types";
-import {
-  asFloat64,
-  createComparisonMethods,
-  defineMembers,
-  isIntType,
-  preserveNames,
-} from "./util";
+import { createComparisonMethods, defineMembers, preserveNames } from "./util";
 
 // declare global {
 //   namespace globalThis {
@@ -124,7 +109,10 @@ function i64TagInfix(
 }
 
 function i64TagUnary(
-  tsa: TemplateStringsArray | [SpacedNumericUnaryOperator, ""] | [NumericUnaryOperator, ""],
+  tsa:
+    | TemplateStringsArray
+    | [SpacedNumericUnaryOperator, ""]
+    | [NumericUnaryOperator, ""],
   value: i64
 ): i64 {
   if (!Array.isArray(tsa) || tsa.length !== 2) {
@@ -250,8 +238,8 @@ const i64: i64Constructor = defineMembers(
     valueOrTsa:
       | BigIntCastable
       | TemplateStringsArray
-      | i64TemplateUnary
-      | i64TemplateInfix,
+      | I64_TemplateUnary
+      | I64_TemplateInfix,
     leftOrValue?: BigIntCastable,
     right?: BigIntCastable
   ): i64 {
@@ -334,10 +322,18 @@ const i64: i64Constructor = defineMembers(
               throw new TypeError("i64.tag(): Invalid template string");
             }
             const operator = customTsa[1] as SpacedNumericInfixOperator;
-            return i64TagInfix(["", operator, ""], coerced(customTsa[0]), coerced(customTsa[2]));
+            return i64TagInfix(
+              ["", operator, ""],
+              coerced(customTsa[0]),
+              coerced(customTsa[2])
+            );
           }
 
-          if (str1.startsWith("~") || str1.startsWith("-") || str1.startsWith("+")) {
+          if (
+            str1.startsWith("~") ||
+            str1.startsWith("-") ||
+            str1.startsWith("+")
+          ) {
             const operator = str1[0] as NumericUnaryOperator;
             return i64TagUnary([operator, ""], coerced(str1.slice(1)));
           }
