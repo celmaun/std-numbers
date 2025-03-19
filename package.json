@@ -1,0 +1,21 @@
+{
+	"name": "std-numbers",
+	"version": "0.0.0",
+	"description": "Standard functions for numbers",
+	"main": "index.js",
+	"module": "index.mjs",
+	"author": "celmaun",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/celmaun/std-numbers.git"
+	},
+	"devDependencies": {
+		"vitest": "^3.0.9"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild"
+		]
+	}
+}
