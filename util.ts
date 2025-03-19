@@ -1,124 +1,90 @@
-import {
-  I8_MIN,
-  I8_MAX,
-  U8_MIN,
-  U8_MAX,
-  I64_MIN,
-  I64_MAX,
-  U16_MIN,
-  U16_MAX,
-  U64_MIN,
-  U64_MAX,
-} from "./constants";
-import {
-  i16,
-  i32,
-  i8,
-  u32,
-  u8,
-  u16,
-  i64,
-  u64,
-  f32,
-  f64,
-  BigIntCastable,
-  CompareMath,
-  IntType,
-  UintType,
-} from "./types";
+import { I8_MIN, I8_MAX, U8_MIN, U8_MAX, I64_MIN, I64_MAX, U16_MIN, U16_MAX, U64_MIN, U64_MAX } from './constants';
+import { i16, i32, i8, u32, u8, u16, i64, u64, f32, f64, BigIntCastable, CompareMath, IntType, UintType } from './types';
 
 export type ClassOf =
-  | "undefined"
-  | "null"
-  | "boolean"
-  | "number"
-  | "bigint"
-  | "string"
-  | "symbol"
-  | "function"
-  | "object"
-  | "Array"
-  | "RegExp"
-  | "Date"
-  | "Error"
-  | "Map"
-  | "Set"
-  | "WeakMap"
-  | "WeakSet"
-  | "ArrayBuffer"
-  | "SharedArrayBuffer"
-  | "DataView"
-  | "Float32Array"
-  | "Float64Array"
-  | "Int8Array"
-  | "Int16Array"
-  | "Int32Array"
-  | "Uint8Array"
-  | "Uint8ClampedArray"
-  | "Uint16Array"
-  | "Uint32Array"
-  | "BigInt64Array"
-  | "BigUint64Array"
-  | "ArrayBufferView"
-  | "Promise"
-  | "Proxy"
-  | "Reflect"
-  | "WeakRef"
-  | "FinalizationRegistry"
-  | "ModuleNamespaceObject"
-  | "Intl.Collator"
-  | "Intl.DateTimeFormat"
-  | "Intl.NumberFormat"
+  | 'undefined'
+  | 'null'
+  | 'boolean'
+  | 'number'
+  | 'bigint'
+  | 'string'
+  | 'symbol'
+  | 'function'
+  | 'object'
+  | 'Array'
+  | 'RegExp'
+  | 'Date'
+  | 'Error'
+  | 'Map'
+  | 'Set'
+  | 'WeakMap'
+  | 'WeakSet'
+  | 'ArrayBuffer'
+  | 'SharedArrayBuffer'
+  | 'DataView'
+  | 'Float32Array'
+  | 'Float64Array'
+  | 'Int8Array'
+  | 'Int16Array'
+  | 'Int32Array'
+  | 'Uint8Array'
+  | 'Uint8ClampedArray'
+  | 'Uint16Array'
+  | 'Uint32Array'
+  | 'BigInt64Array'
+  | 'BigUint64Array'
+  | 'ArrayBufferView'
+  | 'Promise'
+  | 'Proxy'
+  | 'Reflect'
+  | 'WeakRef'
+  | 'FinalizationRegistry'
+  | 'ModuleNamespaceObject'
+  | 'Intl.Collator'
+  | 'Intl.DateTimeFormat'
+  | 'Intl.NumberFormat'
   | string;
 
 export const classof = (value: unknown): ClassOf => {
   if (value === null) {
-    return "null";
+    return 'null';
   }
 
-  if (typeof value !== "object") {
+  if (typeof value !== 'object') {
     return typeof value as ClassOf;
   }
 
   // Symbol.toStringTag can be an empty string ('')
-  const tag = String(
-    Object.prototype.toString.call(value).slice(8, -1)
-  ) as ClassOf;
+  const tag = String(Object.prototype.toString.call(value).slice(8, -1)) as ClassOf;
 
-  if (tag === "" || tag === "Object") {
-    return "object";
+  if (tag === '' || tag === 'Object') {
+    return 'object';
   }
 
-  if (tag === "Boolean") {
-    return "boolean";
+  if (tag === 'Boolean') {
+    return 'boolean';
   }
 
-  if (tag === "Number") {
-    return "number";
+  if (tag === 'Number') {
+    return 'number';
   }
 
-  if (tag === "BigInt") {
-    return "bigint";
+  if (tag === 'BigInt') {
+    return 'bigint';
   }
 
-  if (tag === "String") {
-    return "string";
+  if (tag === 'String') {
+    return 'string';
   }
 
-  if (tag === "Symbol") {
-    return "symbol";
+  if (tag === 'Symbol') {
+    return 'symbol';
   }
 
   return tag;
 };
 
-export const defineReadonly = <
-  T extends {},
-  U extends Readonly<Record<string | symbol, any>>
->(
-  object: T,
-  properties: U
-): T & U => {
+export const defineReadonly = <T extends {}, U extends Readonly<Record<string | symbol, any>>>(object: T, properties: U): T & U => {
   const descriptors = Object.getOwnPropertyDescriptors(properties);
 
   for (const desc of Object.values(descriptors)) {
@@ -132,13 +98,7 @@ export const defineReadonly = <
   return object as any;
 };
 
-export const defineStatic = <
-  T extends {},
-  V extends Record<string | symbol, any>
->(
-  object: T,
-  properties: V
-): T & V => {
+export const defineStatic = <T extends {}, V extends Record<string | symbol, any>>(object: T, properties: V): T & V => {
   const descriptors = Object.getOwnPropertyDescriptors(properties);
 
   for (const desc of Object.values(descriptors)) {
@@ -150,11 +110,7 @@ export const defineStatic = <
   return object as any;
 };
 
-export const defineMembers = <
-  T extends {},
-  const U extends Readonly<Record<string | symbol, any>>,
-  V extends Record<string | symbol, any>
->(
+export const defineMembers = <T extends {}, const U extends Readonly<Record<string | symbol, any>>, V extends Record<string | symbol, any>>(
   target: T,
   readonlyMembers: U,
   staticMembors: V
@@ -164,9 +120,7 @@ export const defineMembers = <
   return target as any;
 };
 
-export const nonEnumerable = <T extends Record<string | symbol, any>>(
-  object: T
-): T => {
+export const nonEnumerable = <T extends Record<string | symbol, any>>(object: T): T => {
   const descriptors = Object.getOwnPropertyDescriptors(object);
 
   for (const desc of Object.values(descriptors)) {
@@ -181,13 +135,13 @@ export const nonEnumerable = <T extends Record<string | symbol, any>>(
 // Preserve the names of functions through minification.
 export const preserveNames = <const T extends Record<string, Function>>(record: T): T => {
   for (const [name, func] of Object.entries(record)) {
-    if ((typeof func === "function") && (func.name !== name)) {
-      Object.defineProperty(func, "name", { value: name });
+    if (typeof func === 'function' && func.name !== name) {
+      Object.defineProperty(func, 'name', { value: name });
     }
   }
 
   return record;
-}
+};
 
 export const createComparisonMethods = <T>(compare: (left: T, right: T) => -1 | 0 | 1): CompareMath<T> => {
   return {
@@ -215,40 +169,39 @@ export const createComparisonMethods = <T>(compare: (left: T, right: T) => -1 | 
       return compare(left, right) !== -1;
     },
   };
-}
+};
 
 export const isIntType = (value: unknown): value is IntType => {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     if (value === 0) {
       return Object.is(value, 0);
     }
 
-    return (value === (value | 0)) || (value === (value >>> 0));
+    return value === (value | 0) || value === value >>> 0;
   }
 
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return value >= I64_MIN && value <= I64_MAX;
   }
 
   return false;
-}
+};
 
 export const isUintType = (value: unknown): value is UintType => {
-  if (typeof value === "number") {
-    return (value === 0) ? Object.is(value, 0) : (value === (value >>> 0));
+  if (typeof value === 'number') {
+    return value === 0 ? Object.is(value, 0) : value === value >>> 0;
   }
 
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return value >= 0n && value <= U64_MAX;
   }
 
   return false;
-}
-
+};
 
 // Is `value` an 8-bit signed integer?
 export const isInt8 = (value: unknown): value is i8 => {
-  if (typeof value !== "number") {
+  if (typeof value !== 'number') {
     return false;
   }
 
@@ -261,7 +214,7 @@ export const isInt8 = (value: unknown): value is i8 => {
 
 // Coerce `value` to an 8-bit signed integer.
 export const asInt8 = (value: unknown): i8 => {
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return (Number(BigInt.asIntN(8, value)) | 0) as i8;
   }
 
@@ -273,7 +226,7 @@ export const asInt8 = (value: unknown): i8 => {
 
 // Is `value` an 8-bit unsigned integer?
 export const isUint8 = (value: unknown): value is u8 => {
-  if (typeof value !== "number") {
+  if (typeof value !== 'number') {
     return false;
   }
 
@@ -285,7 +238,7 @@ export const isUint8 = (value: unknown): value is u8 => {
 // Coerce `value` to an 8-bit unsigned integer.
 
 export const asUint8 = (value: unknown): u8 => {
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return (Number(BigInt.asUintN(8, value)) >>> 0) as u8;
   }
 
@@ -297,7 +250,7 @@ export const asUint8 = (value: unknown): u8 => {
 
 // Is `value` an 16-bit signed integer?
 export const isInt16 = (value: unknown): value is i16 => {
-  if (typeof value !== "number") {
+  if (typeof value !== 'number') {
     return false;
   }
 
@@ -308,7 +261,7 @@ export const isInt16 = (value: unknown): value is i16 => {
 
 // Coerce `value` to an 16-bit signed integer.
 export const asInt16 = (value: unknown): i16 => {
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return (Number(BigInt.asIntN(16, value)) | 0) as i16;
   }
 
@@ -317,7 +270,7 @@ export const asInt16 = (value: unknown): i16 => {
 
 // Is `value` an 16-bit unsigned integer?
 export const isUint16 = (value: unknown): value is u16 => {
-  if (typeof value !== "number") {
+  if (typeof value !== 'number') {
     return false;
   }
 
@@ -328,7 +281,7 @@ export const isUint16 = (value: unknown): value is u16 => {
 
 // Coerce `value` to an 16-bit unsigned integer.
 export const asUint16 = (value: unknown): u16 => {
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return (Number(BigInt.asUintN(16, value)) >>> 0) as u16;
   }
 
@@ -338,15 +291,12 @@ export const asUint16 = (value: unknown): u16 => {
 
 // Is `value` an 32-bit signed integer?
 export const isInt32 = (value: unknown): value is i32 => {
-  return (
-    typeof value === "number" &&
-    (!value ? Object.is(value, 0) : value === (value | 0))
-  );
+  return typeof value === 'number' && (!value ? Object.is(value, 0) : value === (value | 0));
 };
 
 // Coerce `value` to an 32-bit signed integer.
 export const asInt32 = (value: unknown): i32 => {
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return (Number(BigInt.asIntN(32, value)) | 0) as i32;
   }
 
@@ -355,15 +305,12 @@ export const asInt32 = (value: unknown): i32 => {
 
 // Is `value` an 32-bit unsigned integer?
 export const isUint32 = (value: unknown): value is u32 => {
-  return (
-    typeof value === "number" &&
-    (!value ? Object.is(value, 0) : value === value >>> 0)
-  );
+  return typeof value === 'number' && (!value ? Object.is(value, 0) : value === value >>> 0);
 };
 
 // Coerce `value` to an 32-bit unsigned integer.
 export const asUint32 = (value: unknown): u32 => {
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return (Number(BigInt.asUintN(32, value)) >>> 0) as u32;
   }
 
@@ -372,7 +319,7 @@ export const asUint32 = (value: unknown): u32 => {
 
 // Is `value` an 64-bit signed integer?
 export const isBigInt64 = (value: unknown): value is i64 => {
-  if (typeof value !== "bigint") {
+  if (typeof value !== 'bigint') {
     return false;
   }
 
@@ -383,7 +330,7 @@ export const isBigInt64 = (value: unknown): value is i64 => {
 
 // Coerce `value` to an 64-bit signed integer.
 export const asBigInt64 = (value: BigIntCastable): i64 => {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return BigInt(value | 0) as i64;
   }
 
@@ -392,7 +339,7 @@ export const asBigInt64 = (value: BigIntCastable): i64 => {
 
 // Is `value` an 64-bit unsigned integer?
 export const isBigUint64 = (value: unknown): value is u64 => {
-  if (typeof value !== "bigint") {
+  if (typeof value !== 'bigint') {
     return false;
   }
 
@@ -403,7 +350,7 @@ export const isBigUint64 = (value: unknown): value is u64 => {
 
 // Coerce `value` to an 64-bit unsigned integer.
 export const asBigUint64 = (value: BigIntCastable): u64 => {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return BigInt(value >>> 0) as u64;
   }
 
@@ -412,12 +359,12 @@ export const asBigUint64 = (value: BigIntCastable): u64 => {
 
 // Is `value` a 32-bit single precision floating point number?
 export const isFloat32 = (value: unknown): value is f32 => {
-  return typeof value === "number" && Object.is(value, Math.fround(value));
+  return typeof value === 'number' && Object.is(value, Math.fround(value));
 };
 
 // Coerce `value` to a 32-bit single precision floating point number.
 export const asFloat32 = (value: unknown): f32 => {
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return Math.fround(Number(value)) as any as f32;
   }
   return Math.fround(value as number) as any as f32;
@@ -425,7 +372,7 @@ export const asFloat32 = (value: unknown): f32 => {
 
 // Is `value` a 64-bit double precision floating point number?
 export const isFloat64 = (value: unknown): value is f64 => {
-  return typeof value === "number";
+  return typeof value === 'number';
 };
 
 // Coerce `value` to a 64-bit double precision floating point number.

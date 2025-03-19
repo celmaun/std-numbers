@@ -1,8 +1,8 @@
 /**
  * @import {
- *   ArithmeticInfixOperator, 
- *   ArithmeticUnaryOperator, 
- *   BitwiseInfixOperator, BitwiseUnaryOperator, 
+ *   ArithmeticInfixOperator,
+ *   ArithmeticUnaryOperator,
+ *   BitwiseInfixOperator, BitwiseUnaryOperator,
  *   NumericComparisonOperator
  * } from "./types"
  */
@@ -110,9 +110,9 @@ export const U64_MIN = 0n;
 export const U64_MAX = 18446744073709551615n;
 
 /**
-* @type {-3.40282347e38}
-* @constant
-*/
+ * @type {-3.40282347e38}
+ * @constant
+ */
 export const F32_MIN = -3.40282347e38;
 /**
  * @type {3.40282347e38}
@@ -180,35 +180,28 @@ export const F64_EPSILON = 2.2204460492503131e-16;
  * @type {ArithmeticInfixOperator[]}
  * @constant
  */
-export const ARITHMETIC_INFIX_OPERATORS = ["+", "-", "*", "/", "%", "%%", "**"];
+export const ARITHMETIC_INFIX_OPERATORS = ['+', '-', '*', '/', '%', '%%', '**'];
 
 /**
  * @type {ArithmeticUnaryOperator[]}
  * @constant
  */
-export const ARITHMETIC_UNARY_OPERATORS = ["-", "+"];
+export const ARITHMETIC_UNARY_OPERATORS = ['-', '+'];
 
 /**
  * @type {BitwiseInfixOperator[]}
  * @constant
  */
-export const BITWISE_INFIX_OPERATORS = ["&", "|", "^", "<<", ">>", ">>>"];
+export const BITWISE_INFIX_OPERATORS = ['&', '|', '^', '<<', '>>', '>>>'];
 
 /**
  * @type {BitwiseUnaryOperator[]}
  * @constant
  */
-export const BITWISE_UNARY_OPERATORS = ["~"];
+export const BITWISE_UNARY_OPERATORS = ['~'];
 
 /**
  * @type {NumericComparisonOperator[]}
  * @constant
  */
-export const NUMERIC_COMPARISON_OPERATORS = [
-  "==",
-  "!=",
-  "<",
-  ">",
-  "<=",
-  ">="
-];
+export const NUMERIC_COMPARISON_OPERATORS = ['==', '!=', '<', '>', '<=', '>='];

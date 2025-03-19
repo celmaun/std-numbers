@@ -1,4 +1,4 @@
-import { I64_MAX, I64_MIN } from "./constants";
+import { I64_MAX, I64_MIN } from './constants';
 import type {
   BigIntCastable,
   NumericInfixOperator,
@@ -11,8 +11,8 @@ import type {
   I64_TemplateUnary,
   NumericComparisonOperator,
   I64_Safe,
-} from "./types";
-import { createComparisonMethods, defineMembers, preserveNames } from "./util";
+} from './types';
+import { createComparisonMethods, defineMembers, preserveNames } from './util';
 
 function asserty<T>(value: unknown): asserts value is T {}
 
@@ -26,129 +26,101 @@ function asserty<T>(value: unknown): asserts value is T {}
 
 // Interprets the low bits of a BigInt as a 2's-complement 64-bit signed integer. All higher bits are discarded.
 const interpret = (value: bigint | i64): bigint => {
-  if (value == null) throw new TypeError("Missing argument");
+  if (value == null) throw new TypeError('Missing argument');
   return BigInt.asIntN(64, value as bigint);
 };
 const interpreted = interpret as (value: bigint | i64) => i64;
 
 // Coerce `value` to an 64-bit signed integer.
 const coerce = (value: BigIntCastable): bigint => {
-  if (value == null) throw new TypeError("Missing argument");
-  return typeof value === "number"
+  if (value == null) throw new TypeError('Missing argument');
+  return typeof value === 'number'
     ? BigInt(value < 0 ? value | 0 : value >>> 0)
-    : BigInt.asIntN(
-        64,
-        typeof value === "bigint" ? value : BigInt(value as string)
-      );
+    : BigInt.asIntN(64, typeof value === 'bigint' ? value : BigInt(value as string));
 };
 const coerced = coerce as (value: BigIntCastable) => i64;
 
 // If `value` is a number or bigint that's safely and accurately compareable with a 64-bit signed integer
 const isSafe = (value: unknown): value is I64_Safe => {
-  if (value == null) throw new TypeError("Missing argument");
+  if (value == null) throw new TypeError('Missing argument');
 
-  if (typeof value === "number") {
-    return value === 0
-      ? Object.is(value, 0)
-      : value === (value | 0) || value === value >>> 0;
+  if (typeof value === 'number') {
+    return value === 0 ? Object.is(value, 0) : value === (value | 0) || value === value >>> 0;
   }
 
-  return typeof value === "bigint"
-    ? value >= I64_MIN && value <= I64_MAX
-    : false;
+  return typeof value === 'bigint' ? value >= I64_MIN && value <= I64_MAX : false;
 };
 
-function i64TagInfix(
-  op: NumericInfixOperator,
-  left: i64,
-  right: i64
-): i64 {
+function i64TagInfix(op: NumericInfixOperator, left: i64, right: i64): i64 {
   const x = coerce(left);
   const y = coerce(right);
 
   if (!op) {
-    throw new TypeError("i64.tag(): Missing operator");
+    throw new TypeError('i64.tag(): Missing operator');
   }
 
   let result = 0n;
 
-  if (op === "+") {
+  if (op === '+') {
     result = x + y;
-  } else if (op === "-") {
+  } else if (op === '-') {
     result = x - y;
-  } else if (op === "*") {
+  } else if (op === '*') {
     result = x * y;
-  } else if (op === "/") {
+  } else if (op === '/') {
     result = x / y;
-  } else if (op === "%") {
+  } else if (op === '%') {
     result = x % y;
-  } else if (op === "%%") {
+  } else if (op === '%%') {
     // IEEE 754-style modulo operation - different from % remainder operator
     result = ((x % y) + y) % y; // Ensures the result has the same sign as divisor
-  } else if (op === "&") {
+  } else if (op === '&') {
     result = x & y;
-  } else if (op === "|") {
+  } else if (op === '|') {
     result = x | y;
-  } else if (op === "^") {
+  } else if (op === '^') {
     result = x ^ y;
-  } else if (op === "**") {
+  } else if (op === '**') {
     result = x ** y;
-  } else if (op === "<<") {
+  } else if (op === '<<') {
     result = x << y;
-  } else if (op === ">>") {
+  } else if (op === '>>') {
     result = x >> y;
   } else {
-    throw new TypeError("i64.tag(): Unknown operator: " + op);
+    throw new TypeError('i64.tag(): Unknown operator: ' + op);
   }
 
   return interpreted(result);
 }
 
-function i64TagUnary(
-  op: NumericUnaryOperator,
-  value: i64
-): i64 {
-
+function i64TagUnary(op: NumericUnaryOperator, value: i64): i64 {
   const val = coerce(value);
 
   if (!op) {
-    throw new TypeError("Missing operator");
+    throw new TypeError('Missing operator');
   }
 
   let result = 0n;
 
-  if (op === "~") {
+  if (op === '~') {
     result = ~val;
-  } else if (op === "-") {
+  } else if (op === '-') {
     result = -val;
-  } else if (op === "+") {
+  } else if (op === '+') {
     result = 0n + val;
   } else {
-    throw new TypeError("Invalid operator: " + op);
+    throw new TypeError('Invalid operator: ' + op);
   }
 
   return interpreted(result);
 }
 
 const isTemplateUnary = (tsa: unknown): tsa is TemplateStringsArray => {
-  return (
-    Array.isArray(tsa) &&
-    tsa.length === 2 &&
-    typeof tsa[0] === "string" &&
-    tsa[0] !== "" &&
-    tsa[1] === ""
-  );
+  return Array.isArray(tsa) && tsa.length === 2 && typeof tsa[0] === 'string' && tsa[0] !== '' && tsa[1] === '';
 };
 
 const isTemplateInfix = (tsa: unknown): tsa is TemplateStringsArray => {
-  return (
-    Array.isArray(tsa) &&
-    tsa.length === 3 &&
-    tsa[0] === "" &&
-    typeof tsa[1] === "string" &&
-    tsa[1] !== "" &&
-    tsa[2] === ""
-  );
+  return Array.isArray(tsa) && tsa.length === 3 && tsa[0] === '' && typeof tsa[1] === 'string' && tsa[1] !== '' && tsa[2] === '';
 };
 
 interface i64Methods {
@@ -160,13 +132,11 @@ const i64Methods: i64Methods = {
   // Compare two integer values
   compare(left, right) {
     if (left == null || right == null) {
-      throw new TypeError("i64.compare(): Missing arguments");
+      throw new TypeError('i64.compare(): Missing arguments');
     }
 
     if (!isSafe(left) || !isSafe(right)) {
-      throw new TypeError(
-        "i64.compare(): `left` and `right` are not comparable"
-      );
+      throw new TypeError('i64.compare(): `left` and `right` are not comparable');
     }
 
     if (left < right) return -1;
@@ -177,68 +147,60 @@ const i64Methods: i64Methods = {
 
   are(tsa, left, right) {
     if (tsa == null || left == null || right == null) {
-      throw new TypeError("i64.are``: Missing arguments");
+      throw new TypeError('i64.are``: Missing arguments');
     }
 
     if (arguments.length > 3) {
-      throw new TypeError("i64.are``: Too many arguments");
+      throw new TypeError('i64.are``: Too many arguments');
     }
 
     if (!isTemplateInfix(tsa)) {
-      throw new TypeError("i64.are``: Invalid template");
+      throw new TypeError('i64.are``: Invalid template');
     }
 
     if (!isSafe(left) || !isSafe(right)) {
-      throw new TypeError("i64.are``: ${left} and ${right} are not comparable");
+      throw new TypeError('i64.are``: ${left} and ${right} are not comparable');
     }
 
     const operator = tsa[1].trim() as any as NumericComparisonOperator;
 
-    if (operator === "<") return left < right;
-    if (operator === ">") return left > right;
-    if (operator === "<=") return left <= right;
-    if (operator === ">=") return left >= right;
+    if (operator === '<') return left < right;
+    if (operator === '>') return left > right;
+    if (operator === '<=') return left <= right;
+    if (operator === '>=') return left >= right;
 
     // This way we can compare BigInt's and Number's for equality w/o type coercion
     const areEqual = (left < right || left > right) === false;
 
-    if (operator === "===") return areEqual && typeof left === typeof right;
-    if (operator === "!==") return !areEqual || typeof left !== typeof right;
-    if (operator === "==") return areEqual;
-    if (operator === "!=") return !areEqual;
+    if (operator === '===') return areEqual && typeof left === typeof right;
+    if (operator === '!==') return !areEqual || typeof left !== typeof right;
+    if (operator === '==') return areEqual;
+    if (operator === '!=') return !areEqual;
 
-    throw new TypeError("i64.are``: Invalid comparison operator: " + operator);
+    throw new TypeError('i64.are``: Invalid comparison operator: ' + operator);
   },
 } as const;
 
 const i64: i64Constructor = defineMembers(
   function i64(
-    valueOrTsa:
-      | BigIntCastable
-      | TemplateStringsArray
-      | I64_TemplateUnary
-      | I64_TemplateInfix,
+    valueOrTsa: BigIntCastable | TemplateStringsArray | I64_TemplateUnary | I64_TemplateInfix,
     leftOrValue?: BigIntCastable,
     right?: BigIntCastable
   ): i64 {
     if (new.target !== undefined) {
-      throw new TypeError("i64 is not a constructor");
+      throw new TypeError('i64 is not a constructor');
     }
 
     if (valueOrTsa == null) {
-      throw new TypeError("i64(): Missing arguments");
+      throw new TypeError('i64(): Missing arguments');
     }
 
-    if (typeof valueOrTsa === "bigint") {
+    if (typeof valueOrTsa === 'bigint') {
       return interpreted(valueOrTsa);
     }
 
-    if (typeof valueOrTsa === "object" && Array.isArray(valueOrTsa)) {
-      return (i64 as i64Constructor).tag(
-        valueOrTsa as any as TemplateStringsArray,
-        leftOrValue,
-        right
-      );
+    if (typeof valueOrTsa === 'object' && Array.isArray(valueOrTsa)) {
+      return (i64 as i64Constructor).tag(valueOrTsa as any as TemplateStringsArray, leftOrValue, right);
     }
 
     return coerced(valueOrTsa as BigIntCastable);
@@ -250,64 +212,48 @@ const i64: i64Constructor = defineMembers(
   Object.assign(
     {
       is(value: unknown): value is i64 {
-        return (
-          typeof value === "bigint" &&
-          value >= i64.MIN_VALUE &&
-          value <= i64.MAX_VALUE
-        );
+        return typeof value === 'bigint' && value >= i64.MIN_VALUE && value <= i64.MAX_VALUE;
       },
 
       parseInt(int: BigIntCastable): i64 {
         return coerced(int);
       },
 
-      tag(
-        tsa: TemplateStringsArray,
-        leftOrValue?: BigIntCastable,
-        right?: BigIntCastable
-      ) {
+      tag(tsa: TemplateStringsArray, leftOrValue?: BigIntCastable, right?: BigIntCastable) {
         if (arguments.length > 3) {
-          throw new TypeError("i64.tag``: Too many arguments");
+          throw new TypeError('i64.tag``: Too many arguments');
         }
 
         if (tsa == null) {
-          throw new TypeError("i64.tag``: Missing template object");
+          throw new TypeError('i64.tag``: Missing template object');
         }
 
         const str1 = tsa[0].trim();
 
         if (arguments.length === 1) {
-          if (str1 === "" || tsa.length !== 1) {
-            throw new TypeError("i64.tag``: Invalid template string");
+          if (str1 === '' || tsa.length !== 1) {
+            throw new TypeError('i64.tag``: Invalid template string');
           }
 
-          if (str1.includes(" ")) {
+          if (str1.includes(' ')) {
             // Trim -> Remove number separators -> Split by space or tab -> Trim each segment
             // Example literals:
             //  i64`2 + 3`
             //  i64`~2`
             //  i64`1_000_000 + 2_000_000`
             const customTsa = str1
-              .replaceAll("_", "")
+              .replaceAll('_', '')
               .split(/[\ ]+/)
               .map((x) => x.trim());
 
             if (customTsa.length !== 3) {
-              throw new TypeError("i64.tag(): Invalid template string");
+              throw new TypeError('i64.tag(): Invalid template string');
             }
             const operator = customTsa[1] as NumericInfixOperator;
-            return i64TagInfix(
-              operator,
-              coerced(customTsa[0]),
-              coerced(customTsa[2])
-            );
+            return i64TagInfix(operator, coerced(customTsa[0]), coerced(customTsa[2]));
           }
 
-          if (
-            str1.startsWith("~") ||
-            str1.startsWith("-") ||
-            str1.startsWith("+")
-          ) {
+          if (str1.startsWith('~') || str1.startsWith('-') || str1.startsWith('+')) {
             const operator = str1[0] as NumericUnaryOperator;
             return i64TagUnary(operator, coerced(str1.slice(1)));
           }
@@ -317,7 +263,7 @@ const i64: i64Constructor = defineMembers(
 
         if (isTemplateInfix(tsa)) {
           if (leftOrValue == null || right == null) {
-            throw new TypeError("i64.tag(): Missing arguments");
+            throw new TypeError('i64.tag(): Missing arguments');
           }
 
           return i64TagInfix(tsa[1].trim() as NumericInfixOperator, coerced(leftOrValue), coerced(right));
@@ -325,13 +271,13 @@ const i64: i64Constructor = defineMembers(
 
         if (isTemplateUnary(tsa)) {
           if (leftOrValue == null) {
-            throw new TypeError("i64.tag(): Missing arguments");
+            throw new TypeError('i64.tag(): Missing arguments');
           }
 
           return i64TagUnary(tsa[0], coerced(leftOrValue));
         }
 
-        throw new TypeError("i64.tag(): Invalid template string");
+        throw new TypeError('i64.tag(): Invalid template string');
       },
 
       compare: i64Methods.compare,
@@ -344,33 +290,31 @@ const i64: i64Constructor = defineMembers(
 
       // IntMath<BigInt64> implementation
       add(x: i64, y: i64): i64 {
-        if (x == null || y == null) throw new TypeError("Missing argument");
+        if (x == null || y == null) throw new TypeError('Missing argument');
 
         return interpreted(coerce(x) + coerce(y));
       },
 
       sub(x: i64, y: i64): i64 {
-        if (x == null || y == null) throw new TypeError("Missing argument");
+        if (x == null || y == null) throw new TypeError('Missing argument');
 
         return interpreted(coerce(x) - coerce(y));
       },
 
       mul(x: i64, y: i64): i64 {
-        if (x == null || y == null) throw new TypeError("Missing argument");
+        if (x == null || y == null) throw new TypeError('Missing argument');
 
         return interpreted(coerce(x) * coerce(y));
       },
 
       div(dividend: i64, divisor: i64): i64 {
-        if (dividend == null || divisor == null)
-          throw new TypeError("Missing argument");
+        if (dividend == null || divisor == null) throw new TypeError('Missing argument');
 
         return interpreted(coerce(dividend) / coerce(divisor));
       },
 
       mod(dividend: i64, divisor: i64): i64 {
-        if (dividend == null || divisor == null)
-          throw new TypeError("Missing argument");
+        if (dividend == null || divisor == null) throw new TypeError('Missing argument');
 
         const x = coerce(dividend);
         const y = coerce(divisor);
@@ -379,14 +323,13 @@ const i64: i64Constructor = defineMembers(
       },
 
       rem(dividend: i64, divisor: i64): i64 {
-        if (dividend == null || divisor == null)
-          throw new TypeError("Missing argument");
+        if (dividend == null || divisor == null) throw new TypeError('Missing argument');
 
         return interpreted(coerce(dividend) % coerce(divisor));
       },
 
       clz(value: i64): i64 {
-        if (value == null) throw new TypeError("Missing argument");
+        if (value == null) throw new TypeError('Missing argument');
 
         // Count leading zeros
         if (value === 0n) return coerced(64n);
@@ -419,7 +362,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       ctz(value: i64): i64 {
-        if (value == null) throw new TypeError("Missing argument");
+        if (value == null) throw new TypeError('Missing argument');
 
         // Count trailing zeros
         let val = coerce(value);
@@ -452,7 +395,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       popcnt(value: i64): i64 {
-        if (value == null) throw new TypeError("Missing argument");
+        if (value == null) throw new TypeError('Missing argument');
 
         // Count number of set bits
         let val = coerce(value);
@@ -465,8 +408,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       rotl(value: i64, shift: i64): i64 {
-        if (value == null || shift == null)
-          throw new TypeError("Missing argument");
+        if (value == null || shift == null) throw new TypeError('Missing argument');
 
         // Rotate left
         const val = coerce(value);
@@ -475,8 +417,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       rotr(value: i64, shift: i64): i64 {
-        if (value == null || shift == null)
-          throw new TypeError("Missing argument");
+        if (value == null || shift == null) throw new TypeError('Missing argument');
 
         // Rotate right
         const val = coerce(value);
@@ -485,7 +426,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       abs(value: i64): i64 {
-        if (value == null) throw new TypeError("Missing argument");
+        if (value == null) throw new TypeError('Missing argument');
 
         // Absolute value
         const val = coerce(value);
@@ -493,8 +434,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       max(left: i64, right: i64): i64 {
-        if (left == null || right == null)
-          throw new TypeError("Missing argument");
+        if (left == null || right == null) throw new TypeError('Missing argument');
 
         // Maximum of two values
         const l = coerce(left);
@@ -503,8 +443,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       min(left: i64, right: i64): i64 {
-        if (left == null || right == null)
-          throw new TypeError("Missing argument");
+        if (left == null || right == null) throw new TypeError('Missing argument');
 
         // Minimum of two values
         const l = coerce(left);
@@ -513,8 +452,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       pow(base: i64, exponent: i64): i64 {
-        if (base == null || exponent == null)
-          throw new TypeError("Missing argument");
+        if (base == null || exponent == null) throw new TypeError('Missing argument');
 
         // Power operation
         const b = coerce(base);
@@ -523,8 +461,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       shl(value: i64, shift: i64): i64 {
-        if (value == null || shift == null)
-          throw new TypeError("Missing argument");
+        if (value == null || shift == null) throw new TypeError('Missing argument');
 
         // Shift left operation
         const val = coerce(value);
@@ -533,8 +470,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       shr(value: i64, shift: i64): i64 {
-        if (value == null || shift == null)
-          throw new TypeError("Missing argument");
+        if (value == null || shift == null) throw new TypeError('Missing argument');
 
         // Shift right operation
         const val = coerce(value);
@@ -543,7 +479,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       not(value: i64): i64 {
-        if (value == null) throw new TypeError("Missing argument");
+        if (value == null) throw new TypeError('Missing argument');
 
         // Bitwise NOT operation
         const val = coerce(value);
@@ -551,8 +487,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       and(left: i64, right: i64): i64 {
-        if (left == null || right == null)
-          throw new TypeError("Missing argument");
+        if (left == null || right == null) throw new TypeError('Missing argument');
 
         // Bitwise AND operation
         const l = coerce(left);
@@ -561,8 +496,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       or(left: i64, right: i64): i64 {
-        if (left == null || right == null)
-          throw new TypeError("Missing argument");
+        if (left == null || right == null) throw new TypeError('Missing argument');
 
         // Bitwise OR operation
         const l = coerce(left);
@@ -571,8 +505,7 @@ const i64: i64Constructor = defineMembers(
       },
 
       xor(left: i64, right: i64): i64 {
-        if (left == null || right == null)
-          throw new TypeError("Missing argument");
+        if (left == null || right == null) throw new TypeError('Missing argument');
 
         // Bitwise XOR operation
         const l = coerce(left);

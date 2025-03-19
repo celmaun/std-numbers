@@ -1,11 +1,5 @@
-import type {
-  i32,
-  u32,
-  i64,
-  u64,
-  BigIntCastable,
-} from "./types";
-import { defineReadonly, defineStatic } from "./util";
+import type { i32, u32, i64, u64, BigIntCastable } from './types';
+import { defineReadonly, defineStatic } from './util';
 
 defineReadonly(Number, {
   MIN_INT32: -(2 ** 31),
@@ -16,24 +10,13 @@ defineReadonly(Number, {
 
 const NumberConstructorMethods = {
   isi32(value: unknown): value is i32 {
-    return (
-      typeof value === "number" &&
-      (!value ? Object.is(value, 0) : value === (value | 0))
-    );
+    return typeof value === 'number' && (!value ? Object.is(value, 0) : value === (value | 0));
   },
   isu32(value: unknown): value is u32 {
-    return (
-      typeof value === "number" &&
-      (!value ? Object.is(value, 0) : value === value >>> 0)
-    );
+    return typeof value === 'number' && (!value ? Object.is(value, 0) : value === value >>> 0);
   },
   is32Bit(value: unknown): value is i32 | u32 {
-    return (
-      typeof value === "number" &&
-      (!value
-        ? Object.is(value, 0)
-        : (value | 0) === value || value >>> 0 === value)
-    );
+    return typeof value === 'number' && (!value ? Object.is(value, 0) : (value | 0) === value || value >>> 0 === value);
   },
 } as const;
 
@@ -46,19 +29,16 @@ defineReadonly(BigInt, {
   MAX_UINT64: 2n ** 64n,
 });
 
-
 const BigIntConstructorMethods = {
   isInt64(value: unknown): value is i64 {
     const MIN_INT64 = -9223372036854775808n; // BigInt.MIN_INT64
     const MAX_INT64 = 9223372036854775807n; // BigInt.MAX_INT64
 
-    return (
-      typeof value === "bigint" && value >= MIN_INT64 && value <= MAX_INT64
-    );
+    return typeof value === 'bigint' && value >= MIN_INT64 && value <= MAX_INT64;
   },
   isUint64(value: unknown): value is u64 {
     const MAX_UINT64 = 18446744073709551615n; // BigInt.MAX_UINT64
-    return typeof value === "bigint" && value >= 0n && value <= MAX_UINT64;
+    return typeof value === 'bigint' && value >= 0n && value <= MAX_UINT64;
   },
 
   // Type-casting with `BigInt(x)`
