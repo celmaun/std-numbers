@@ -10,10 +10,12 @@
 		"type": "git",
 		"url": "git+https://github.com/celmaun/std-numbers.git"
 	},
-  "scripts": {
-    "test": "vitest"
-  },
+	"scripts": {
+		"test": "vitest"
+	},
 	"devDependencies": {
+		"@vitest/ui": "3.0.9",
+		"typescript": "^5.8.2",
 		"vitest": "^3.0.9"
 	},
 	"pnpm": {
