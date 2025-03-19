@@ -13,9 +13,24 @@ export type i32 =
   | 32;
 // export type Int32 = i32;
 
-export type u8 = (Number & { readonly ["#Uint8"]: unique symbol }) | 0 | 1 | 8 | 255;
-export type u16 = (Number & { readonly ["#Uint16"]: unique symbol }) | 0 | 1 | 16 | 65535;
-export type u32 = (Number & { readonly ["#Uint32"]: unique symbol }) | 0 | 1 | 32 | 4294967295;
+export type u8 =
+  | (Number & { readonly ["#Uint8"]: unique symbol })
+  | 0
+  | 1
+  | 8
+  | 255;
+export type u16 =
+  | (Number & { readonly ["#Uint16"]: unique symbol })
+  | 0
+  | 1
+  | 16
+  | 65535;
+export type u32 =
+  | (Number & { readonly ["#Uint32"]: unique symbol })
+  | 0
+  | 1
+  | 32
+  | 4294967295;
 // export type Uint32 = u32;
 
 export type f32 = Number & { readonly ["#Float32"]: unique symbol };
@@ -80,7 +95,15 @@ export type ArithmeticUnaryOperator = "-" | "+";
 export type BitwiseInfixOperator = "&" | "|" | "^" | "<<" | ">>" | ">>>";
 export type BitwiseUnaryOperator = "~";
 
-export type NumericComparisonOperator = "==" | "!=" | "<" | ">" | "<=" | ">=";
+export type NumericComparisonOperator =
+  | "=="
+  | "!="
+  | "<"
+  | ">"
+  | "<="
+  | ">="
+  | "==="
+  | "!==";
 
 export type NumericInfixOperator =
   | ArithmeticInfixOperator
@@ -153,15 +176,15 @@ export interface UintMath<T> extends IntMath<T> {
   shru(value: T, shift: T): T; // >>>
 }
 
-export type I64_Compareable = i8 | u8 | i16 | u16 | i32 | u32 | i64 | u64;
+export type I64_Safe = i8 | u8 | i16 | u16 | i32 | u32 | i64;
 
 export type I64_TemplateUnary =
   | TemplateStringsArray
-  | [NumericUnaryOperator, ""]
+  | [NumericUnaryOperator, ""];
 
 export type I64_TemplateInfix =
   | TemplateStringsArray
-  | ["", `${' ' | ''}${NumericInfixOperator}${'' | ' '}`, ""];
+  | ["", `${" " | ""}${NumericInfixOperator}${"" | " "}`, ""];
 
 export interface i64Constructor extends IntMath<i64> {
   readonly MIN_VALUE: -9223372036854775808n;
@@ -175,18 +198,18 @@ export interface i64Constructor extends IntMath<i64> {
 
   tag(arg0: TemplateStringsArray): i64;
   tag(arg0: I64_TemplateUnary, arg1?: BigIntCastable): i64;
-  tag(tsa: I64_TemplateInfix, arg1?: BigIntCastable, arg2?: BigIntCastable): i64;
+  tag(
+    tsa: I64_TemplateInfix,
+    arg1?: BigIntCastable,
+    arg2?: BigIntCastable
+  ): i64;
 
   readonly prototype: i64;
   is(value: unknown): value is i64;
   // String tag variant of compare method / comparison operators.
-  are(
-    tsa: TemplateStringsArray,
-    left: I64_Compareable,
-    right: I64_Compareable
-  ): boolean;
+  are(tsa: TemplateStringsArray, left: I64_Safe, right: I64_Safe): boolean;
   // Compare two numbers and return -1 if left < right, 0 if left == right, and 1 if left > right.
-  compare(left: I64_Compareable, right: I64_Compareable): -1 | 0 | 1;
+  compare(left: I64_Safe, right: I64_Safe): -1 | 0 | 1;
 
   parseInt(int: BigIntCastable): i64;
 }
