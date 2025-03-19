@@ -17,7 +17,9 @@ export type NumberCastable = number | i32 | u32 | string | boolean;
 
 export type BigIntCastable = boolean | number | bigint | i8 | u8 | i16 | u16 | i32 | u32 | i64 | u64 | string;
 
-export type i64 = (BigInt & { readonly ['#BigInt64']: unique symbol }) | 0n | -1n | 1n | 64n;
+//export type i64 = (BigInt & { readonly ['#BigInt64']: unique symbol }) | 0n | -1n | 1n | 64n;
+
+export type i64 = bigint | 0n | -1n | 1n | 64n;
 
 // export type BigInt64 = i64;
 
@@ -78,7 +80,7 @@ export interface BitwiseMath<T> {
   shr(value: T, shift: T): T; // >>
 }
 
-export interface IntMath<T> extends ArithmeticMath<T>, BitwiseMath<T>, CompareMath<Numeric> {
+export interface IntMath<T> extends ArithmeticMath<T>, BitwiseMath<T>, CompareMath<T> {
   // Performs the sign-agnostic count leading zero bits operation on a 32-bit or 64-bit integer. All zero bits are considered leading if the value is zero.
   clz(value: T): T;
 
@@ -108,28 +110,28 @@ export type I64_TemplateUnary = TemplateStringsArray | [NumericUnaryOperator, ''
 
 export type I64_TemplateInfix = TemplateStringsArray | ['', `${' ' | ''}${NumericInfixOperator}${'' | ' '}`, ''];
 
-export interface i64Constructor extends IntMath<i64> {
+export interface i64Constructor extends IntMath<number | string | bigint> {
   readonly MIN_VALUE: -9223372036854775808n;
   readonly MAX_VALUE: 9223372036854775807n;
 
-  (arg0: BigIntCastable): i64;
+  (arg0: number | string | bigint): i64;
 
   (arg0: TemplateStringsArray): i64;
-  (arg0: I64_TemplateUnary, arg1?: BigIntCastable): i64;
-  (arg0: I64_TemplateInfix, arg1?: BigIntCastable, arg2?: BigIntCastable): i64;
+  (arg0: I64_TemplateUnary, arg1?: number | string | bigint): i64;
+  (arg0: I64_TemplateInfix, arg1?: number | string | bigint, arg2?: number | string | bigint): i64;
 
   tag(arg0: TemplateStringsArray): i64;
-  tag(arg0: I64_TemplateUnary, arg1?: BigIntCastable): i64;
-  tag(tsa: I64_TemplateInfix, arg1?: BigIntCastable, arg2?: BigIntCastable): i64;
+  tag(arg0: I64_TemplateUnary, arg1?: number | string | bigint): i64;
+  tag(tsa: I64_TemplateInfix, arg1?: number | string | bigint, arg2?: number | string | bigint): i64;
 
   readonly prototype: i64;
   is(value: unknown): value is i64;
   // String tag variant of compare method / comparison operators.
-  are(tsa: TemplateStringsArray, left: I64_Safe, right: I64_Safe): boolean;
+  are(tsa: TemplateStringsArray, left: number | string | bigint, right: number | string | bigint): boolean;
   // Compare two numbers and return -1 if left < right, 0 if left == right, and 1 if left > right.
-  cmp(left: I64_Safe, right: I64_Safe): -1 | 0 | 1;
+  cmp(left: number | string | bigint, right: number | string | bigint): -1 | 0 | 1;
 
-  parseInt(int: BigIntCastable): i64;
+  parseInt(int: number | string | bigint): i64;
 }
 
 declare global {

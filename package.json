@@ -10,6 +10,9 @@
 		"type": "git",
 		"url": "git+https://github.com/celmaun/std-numbers.git"
 	},
+  "scripts": {
+    "test": "vitest"
+  },
 	"devDependencies": {
 		"vitest": "^3.0.9"
 	},
