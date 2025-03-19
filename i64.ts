@@ -1,10 +1,8 @@
-import { I64_MAX, I64_MIN } from './constants';
+import { I32_MAX, I32_MIN, I64_MAX, I64_MIN, U32_MAX } from './constants';
 import type {
   BigIntCastable,
   NumericInfixOperator,
   NumericUnaryOperator,
-  SpacedNumericInfixOperator,
-  SpacedNumericUnaryOperator,
   i64Constructor,
   i64,
   I64_TemplateInfix,
@@ -15,14 +13,6 @@ import type {
 import { createComparisonMethods, defineMembers, preserveNames } from './util';
 
 function asserty<T>(value: unknown): asserts value is T {}
-
-// declare global {
-//   namespace globalThis {
-//     interface BigIntConstructor {
-//       asIntN(bits: 64, int: bigint | i64): i64;
-//     }
-//   }
-// }
 
 // Interprets the low bits of a BigInt as a 2's-complement 64-bit signed integer. All higher bits are discarded.
 const interpret = (value: bigint | i64): bigint => {
@@ -39,6 +29,20 @@ const coerce = (value: BigIntCastable): bigint => {
     : BigInt.asIntN(64, typeof value === 'bigint' ? value : BigInt(value as string));
 };
 const coerced = coerce as (value: BigIntCastable) => i64;
+
+const clamp = (value: BigIntCastable): bigint => {
+  if (value == null) throw new TypeError('Missing argument');
+
+  if (typeof value === 'number') {
+    return BigInt(value < 0 ? (value > I32_MIN ? value | 0 : I32_MIN) : value < U32_MAX ? value >>> 0 : U32_MAX);
+  }
+
+  let val = typeof value === 'bigint' ? value : BigInt(value as string);
+
+  return (val < I64_MIN) ? I64_MIN : (val > I64_MAX) ? I64_MAX : val;
+};
+
+const clamped = clamp as (value: BigIntCastable) => i64;
 
 // If `value` is a number or bigint that's safely and accurately compareable with a 64-bit signed integer
 const isSafe = (value: unknown): value is I64_Safe => {
@@ -115,11 +119,11 @@ function i64TagUnary(op: NumericUnaryOperator, value: i64): i64 {
   return interpreted(result);
 }
 
-const isTemplateUnary = (tsa: unknown): tsa is TemplateStringsArray => {
+const isTemplateUnary = (tsa: unknown) => {
   return Array.isArray(tsa) && tsa.length === 2 && typeof tsa[0] === 'string' && tsa[0] !== '' && tsa[1] === '';
 };
 
-const isTemplateInfix = (tsa: unknown): tsa is TemplateStringsArray => {
+const isTemplateInfix = (tsa: unknown) => {
   return Array.isArray(tsa) && tsa.length === 3 && tsa[0] === '' && typeof tsa[1] === 'string' && tsa[1] !== '' && tsa[2] === '';
 };
 
@@ -266,15 +270,18 @@ const i64: i64Constructor = defineMembers(
             throw new TypeError('i64.tag(): Missing arguments');
           }
 
-          return i64TagInfix(tsa[1].trim() as NumericInfixOperator, coerced(leftOrValue), coerced(right));
+          const op = tsa[1].trim() as NumericInfixOperator;
+
+          return i64TagInfix(op, coerced(leftOrValue), coerced(right));
         }
 
         if (isTemplateUnary(tsa)) {
           if (leftOrValue == null) {
             throw new TypeError('i64.tag(): Missing arguments');
           }
+          const op = tsa[0].trim() as NumericUnaryOperator;
 
-          return i64TagUnary(tsa[0], coerced(leftOrValue));
+          return i64TagUnary(op, coerced(leftOrValue));
         }
 
         throw new TypeError('i64.tag(): Invalid template string');
