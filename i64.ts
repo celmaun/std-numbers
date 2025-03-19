@@ -44,6 +44,12 @@ const clamp = (value: BigIntCastable): bigint => {
 
 const clamped = clamp as (value: BigIntCastable) => i64;
 
+const is = (value: unknown): value is i64 => {
+  if (value === undefined) throw new TypeError('undefined is not an argument');
+
+  return typeof value === 'bigint' && value >= i64.MIN_VALUE && value <= i64.MAX_VALUE;
+}
+
 // If `value` is a number or bigint that's safely and accurately compareable with a 64-bit signed integer
 const isSafe = (value: unknown): value is I64_Safe => {
   if (value == null) throw new TypeError('Missing argument');
@@ -128,13 +134,13 @@ const isTemplateInfix = (tsa: unknown) => {
 };
 
 interface i64Methods {
-  compare(left: I64_Safe, right: I64_Safe): -1 | 0 | 1;
+  cmp(left: I64_Safe, right: I64_Safe): -1 | 0 | 1;
   are(tsa: TemplateStringsArray, left: I64_Safe, right: I64_Safe): boolean;
 }
 
 const i64Methods: i64Methods = {
   // Compare two integer values
-  compare(left, right) {
+  cmp(left, right) {
     if (left == null || right == null) {
       throw new TypeError('i64.compare(): Missing arguments');
     }
@@ -185,7 +191,7 @@ const i64Methods: i64Methods = {
   },
 } as const;
 
-const i64: i64Constructor = defineMembers(
+export const I64: i64Constructor = defineMembers(
   function i64(
     valueOrTsa: BigIntCastable | TemplateStringsArray | I64_TemplateUnary | I64_TemplateInfix,
     leftOrValue?: BigIntCastable,
@@ -220,6 +226,8 @@ const i64: i64Constructor = defineMembers(
       },
 
       parseInt(int: BigIntCastable): i64 {
+        if (int == null) throw new TypeError('Missing argument');
+
         return coerced(int);
       },
 
@@ -287,7 +295,7 @@ const i64: i64Constructor = defineMembers(
         throw new TypeError('i64.tag(): Invalid template string');
       },
 
-      compare: i64Methods.compare,
+      cmp: i64Methods.cmp,
 
       are: i64Methods.are,
 
@@ -520,17 +528,17 @@ const i64: i64Constructor = defineMembers(
         return interpreted(l ^ r);
       },
     },
-    createComparisonMethods(i64Methods.compare)
+    createComparisonMethods(i64Methods.cmp)
   )
 );
 
 preserveNames({
-  i64,
+  i64: I64,
 });
 
-Object.defineProperty(globalThis, i64.name, {
+Object.defineProperty(globalThis, 'i64', {
   configurable: true,
   enumerable: false,
   writable: true,
-  value: i64,
+  value: I64,
 });

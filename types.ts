@@ -127,7 +127,7 @@ export interface i64Constructor extends IntMath<i64> {
   // String tag variant of compare method / comparison operators.
   are(tsa: TemplateStringsArray, left: I64_Safe, right: I64_Safe): boolean;
   // Compare two numbers and return -1 if left < right, 0 if left == right, and 1 if left > right.
-  compare(left: I64_Safe, right: I64_Safe): -1 | 0 | 1;
+  cmp(left: I64_Safe, right: I64_Safe): -1 | 0 | 1;
 
   parseInt(int: BigIntCastable): i64;
 }
