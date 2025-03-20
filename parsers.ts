@@ -1,4 +1,3 @@
-
 type numable = number | bigint | string;
 
 type i8 = number & { '@i8': void };
@@ -56,7 +55,7 @@ const util = {
   },
 
   floatToString(value: number): string {
-    if (value === 0) return Object.is(value, -0) ? '-0' : '0';
+    if (value === 0) return Object.is(-0, value) ? '-0' : '0';
     return String(value);
   },
 };
@@ -64,7 +63,7 @@ const util = {
 const { typeTag, floatToString } = util;
 
 // Returns a parser function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
-const parsei32Factory = (): (value: numable) => i32 => {
+const parsei32Factory = (): ((value: numable) => i32) => {
   // The minimum value for a 32-bit signed integer.
   const MIN = -2147483648 as const;
   // The maximum value for a 32-bit signed integer.
@@ -74,45 +73,47 @@ const parsei32Factory = (): (value: numable) => i32 => {
   const parser = {
     __proto__: null as never,
 
-    guardFloat(original: number, int: number): true {
-      if (!Object.is(original, int)) {
-        // Round-trip failed
-        throw new TypeError(prefix + 'Invalid coercion from `float`: ' + floatToString(original));
+    guardFloat(orig: number, int: i32): true {
+      if (orig === int) {
+        if (orig === 0 && Object.is(-0, orig)) throw new TypeError(pre + 'Invalid argument: Negative zero');
+        return true;
       }
+      
+      if (!Number.isFinite(orig)) throw new TypeError(pre + 'Invalid argument: ' + orig);
+
+      if (orig % 1 !== 0) {
+        throw new TypeError(pre + 'Invalid coercion from `float` with a non-zero fraction: ' + floatToString(orig));
+      }
+
       return true;
     },
 
-    guardString(original: string, int: number): true {
-      if (String(int) !== original) {
-        // Round-trip failed
-        throw new SyntaxError(prefix + 'Invalid coercion from `string`: ' + original);
-      }
-      return true;
+    guardString(orig: string, int: i32): true {
+      if (orig === '') throw new SyntaxError(pre + 'Invalid argument: Empty string');
+      if (orig === String(int)) return true;
+      if (orig.trim() === '') throw new SyntaxError(pre + 'Invalid argument: Empty string of whitespace characters');
+
+      const bi = BigInt(orig);
+      if (orig === String(bi)) guardRange(bi);
+  
+      // Round-trip failed
+      throw new SyntaxError(pre + 'Invalid coercion from `string`: ' + orig);
     },
 
     guardRange(value: number | bigint): true {
-      if (value === 0) {
-        if (Object.is(value, -0)) throw new TypeError(prefix + 'Invalid argument: Negative zero');
-        return true;
-      }
-
-      if (value < MIN || value > MAX) {
-        throw new RangeError(prefix + 'Argument is out of 32-bit signed integer range: ' + value);
-      }
+      if (value < MIN || value > MAX) throw new RangeError(pre + 'Argument is out of 32-bit signed integer range: ' + value);
       return true;
     },
 
     // Coerce `value` to a 32-bit signed integer.
     parsei32(value: numable): i32 {
-      if ((value == null) || (value !== value)) throw new TypeError(prefix + 'Invalid argument: ' + value);
+      if (value == null || value !== value) throw new TypeError(pre + 'Invalid argument: ' + value);
 
       if (typeof value === 'number') {
-        if (value === Infinity || value === -Infinity) {
-          throw new TypeError(prefix + 'Invalid argument: Infinity');
-        }
-        guardRange(value);
         const val = value | 0;
-        guardFloat(value, val);
+        guardFloat(value, val as i32);
+        guardRange(value);
+
         return val as i32;
       }
 
@@ -122,22 +123,19 @@ const parsei32Factory = (): (value: numable) => i32 => {
       }
 
       if (typeof value === 'string') {
-        const val = Number.parseInt(value, 10);
-
-        guardRange(val);
-        guardString(value, val);
-
+        const val = Number.parseInt(value, 10) | 0;
+        guardString(value, val as i32);
         return val as i32;
       }
 
-      throw new TypeError(prefix + 'Invalid argument type: ' + typeTag(value));
+      throw new TypeError(pre + 'Invalid argument type: ' + typeTag(value));
     },
   } as const;
 
   const { parsei32, guardFloat, guardRange, guardString } = parser;
-  const prefix = parsei32.name + '(): ';
+  const pre = parsei32.name + '(): ';
 
   return parsei32;
-}
+};
 
 export const parsei32 = parsei32Factory();
