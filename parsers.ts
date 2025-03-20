@@ -76,15 +76,12 @@ const parsei32Factory = (): ((value: numable) => i32) => {
     __proto__: null as never,
 
     guardFloat(orig: number, int: i32): true {
-      if (orig === int) {
-        if (orig === 0 && Object.is(-0, orig)) throw new TypeError(invalidArg + 'Negative zero');
-        return true;
-      }
+      if (orig === int) return true;
 
       if (!Number.isFinite(orig)) throw new TypeError(invalidArg + orig);
       if (Number.isSafeInteger(orig)) guardRange(orig);
 
-      throw new TypeError(pre + 'Invalid coercion from non-integer `float`: ' + floatToString(orig));
+      throw new TypeError(pre + 'Invalid coercion from non-integer `float`: ' + orig);
     },
 
     guardString(orig: string, int: i32): true {
@@ -100,19 +97,27 @@ const parsei32Factory = (): ((value: numable) => i32) => {
     },
 
     guardRange(value: number | bigint): true {
-      if (value < MIN || value > MAX) throw new RangeError(pre + 'Argument is out of 32-bit signed integer range: ' + value);
+      if (value < MIN || value > MAX) throw new RangeError(pre + 'Number is out of 32-bit signed integer range: ' + value);
       return true;
     },
 
     // Coerce `value` to a 32-bit signed integer.
-    parsei32(value: numable | Int32Array): i32 {
+    parsei32(value: numable): i32 {
       if (value == null || value !== value) throw new TypeError(invalidArg + value);
+
+      // Fast path for common cases
+      if (value === 0) {
+        if (1 / value !== Infinity) throw new TypeError(invalidArg + 'Negative zero');
+        return 0 as i32;
+      }
+      if (value === 0n) return 0 as i32;
+      if ((value === 1) || (value === 1n)) return 1 as i32;
+      if ((value === -1) || (value === -1n)) return -1 as i32;
+      if ((value === MIN) || (value === MAX)) return (value | 0) as i32;
 
       if (typeof value === 'number') {
         const val = (value | 0) as i32;
         guardFloat(value, val);
-        guardRange(value);
-
         return val;
       }
 
@@ -127,7 +132,7 @@ const parsei32Factory = (): ((value: numable) => i32) => {
         return val;
       }
 
-      throw new TypeError(pre + 'Invalid argument type: ' + typeTag(value));
+      throw new TypeError(invalidArg + typeTag(value));
     },
   } as const;
 
