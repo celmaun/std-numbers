@@ -2,10 +2,7 @@ function asserty<T>(value: unknown): asserts value is T {}
 
 type numable = number | bigint | string;
 
-type i8 = number & { '@i8': void };
-type u8 = number & { '@u8': void };
-type i16 = number & { '@i16': void };
-type u16 = number & { '@u16': void };
+
 type i32 = number & { '@i32': void };
 type u32 = number & { '@u32': void };
 type i64 = bigint & { '@i64': void };
