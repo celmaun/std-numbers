@@ -8,8 +8,8 @@ type i16 = number & { '@i16': void };
 type u16 = number & { '@u16': void };
 type i32 = number & { '@i32': void };
 type u32 = number & { '@u32': void };
-type i64 = number & { '@i64': void };
-type u64 = number & { '@u64': void };
+type i64 = bigint & { '@i64': void };
+type u64 = bigint & { '@u64': void };
 type f32 = number & { '@f32': void };
 type f64 = number & { '@f64': void };
 
@@ -68,8 +68,10 @@ const { typeTag, floatToString } = util;
 const parsei32Factory = (): ((value: numable) => i32) => {
   // The minimum value for a 32-bit signed integer.
   const MIN = -2147483648 as const;
+  const MIN_BIGINT = -2147483648n as const;
   // The maximum value for a 32-bit signed integer.
   const MAX = 2147483647 as const;
+  const MAX_BIGINT = 2147483647n as const;
 
   // Encapsulate in object literals to preserve function names
   const parser = {
@@ -107,13 +109,14 @@ const parsei32Factory = (): ((value: numable) => i32) => {
 
       // Fast path for common cases
       if (value === 0) {
-        if (1 / value !== Infinity) throw new TypeError(invalidArg + 'Negative zero');
+        if (1 / value !== 1 / 0) throw new TypeError(invalidArg + 'Negative zero');
         return 0 as i32;
       }
       if (value === 0n) return 0 as i32;
       if ((value === 1) || (value === 1n)) return 1 as i32;
       if ((value === -1) || (value === -1n)) return -1 as i32;
       if ((value === MIN) || (value === MAX)) return (value | 0) as i32;
+      if ((value === MIN_BIGINT) || (value === MAX_BIGINT)) return (Number(value) | 0) as i32;
 
       if (typeof value === 'number') {
         const val = (value | 0) as i32;
