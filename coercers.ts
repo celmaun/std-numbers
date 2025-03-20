@@ -55,23 +55,20 @@ const util = {
     if (tag === '[object Symbol]') return 'symbol';
     return tag.slice(8, -1);
   },
-
-  floatToString(value: number): string {
-    if (value === 0) return Object.is(-0, value) ? '-0' : '0';
-    return String(value);
-  },
 };
 
-const { typeTag, floatToString } = util;
+const { typeTag } = util;
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
 const coercei32Factory = () => {
   // The minimum value for a 32-bit signed integer.
-  const MIN = -2147483648 as const;
+  const MIN = -2147483648 as const as i32;
   const MIN_BIGINT = -2147483648n as const;
+  const MIN_STRING = '-2147483648' as const;
   // The maximum value for a 32-bit signed integer.
-  const MAX = 2147483647 as const;
+  const MAX = 2147483647 as const as i32;
   const MAX_BIGINT = 2147483647n as const;
+  const MAX_STRING = '2147483647' as const;
 
   const coercer = {
     __proto__: null as never,
@@ -84,7 +81,7 @@ const coercei32Factory = () => {
     guardFloat(orig: number, int: i32): true {
       if (orig === int) return true;
 
-      if ((orig === Infinity) || (orig === -Infinity)) throw new TypeError(invalidArg + orig);
+      if (orig === Infinity || orig === -Infinity) throw new TypeError(invalidArg + orig);
       if (Number.isSafeInteger(orig)) guardRange(orig);
 
       throw new TypeError(pre + 'Call a rounding method to convert `float`: ' + orig);
@@ -93,48 +90,55 @@ const coercei32Factory = () => {
     guardString(orig: string, int: i32): true {
       if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
       if (orig === String(int)) return true;
-      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
 
       const bi = BigInt(orig);
       if (orig === String(bi)) guardRange(bi);
 
       // Round-trip failed
-      throw new SyntaxError(pre + 'Invalid coercion from `string`: ' + orig);
+      throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
     },
 
     // Coerce `value` to a 32-bit signed integer.
-    coercei32(value: numable): i32 {
-      if (value == null || value !== value) throw new TypeError(invalidArg + value);
+    coercei32(val: numable): i32 {
+      if (val == null || val !== val) throw new TypeError(invalidArg + val);
 
       // Fast path for common cases
-      if (value === 0) {
-        if (1 / value !== 1 / 0) throw new TypeError(invalidArg + 'Negative zero');
+      if (val === 0) {
+        if (1 / val !== 1 / 0) throw new TypeError(invalidArg + 'Negative zero');
         return 0 as i32;
       }
-      if (value === 0n) return 0 as i32;
-      if (value === 1 || value === 1n) return 1 as i32;
-      if (value === -1 || value === -1n) return -1 as i32;
-      if (value === MIN || value === MAX) return (value | 0) as i32;
-      if (value === MIN_BIGINT || value === MAX_BIGINT) return (Number(value) | 0) as i32;
+      if (val === 0n) return 0 as i32;
+      if (val === 1 || val === 1n) return 1 as i32;
+      if (val === -1 || val === -1n) return -1 as i32;
+      if (val === MIN || val === MAX) return (val | 0) as i32;
+      if (val === MIN_BIGINT || val === MAX_BIGINT) return (Number(val) | 0) as i32;
 
-      if (typeof value === 'number') {
-        const val = (value | 0) as i32;
-        guardFloat(value, val);
-        return val;
+      if (typeof val === 'number') {
+        const v = (val | 0) as i32;
+        guardFloat(val, v);
+        return v;
       }
 
-      if (typeof value === 'bigint') {
-        guardRange(value);
-        return (Number(value) | 0) as i32;
+      if (typeof val === 'bigint') {
+        guardRange(val);
+        return (Number(val) | 0) as i32;
       }
 
-      if (typeof value === 'string') {
-        const val = (Number.parseInt(value, 10) | 0) as i32;
-        guardString(value, val);
-        return val;
+      if (typeof val === 'string') {
+        // Hot-paths for common strings
+        if (val === '0') return 0 as i32;
+        if (val === '1') return 1 as i32;
+        if (val === '-1') return -1 as i32;
+        if (val === MIN_STRING) return MIN;
+        if (val === MAX_STRING) return MAX;
+
+        const v = (Number.parseInt(val, 10) | 0) as i32;
+        guardString(val, v);
+        return v;
       }
 
-      throw new TypeError(invalidArg + typeTag(value));
+      throw new TypeError(invalidArg + typeTag(val));
     },
 
     safeCoercei32<T>(val: numable, alt: T = 0 as T): i32 | T {
@@ -164,6 +168,13 @@ const coercei32Factory = () => {
       }
 
       if (typeof val === 'string') {
+        // Hot-paths for common strings
+        if (val === '0') return 0 as i32;
+        if (val === '1') return 1 as i32;
+        if (val === '-1') return -1 as i32;
+        if (val === MIN_STRING) return MIN;
+        if (val === MAX_STRING) return MAX;
+
         const v = (Number.parseInt(val, 10) | 0) as i32;
         if (String(v) !== val) return typeof alt === 'function' ? alt(val) : alt;
         return v;
@@ -180,6 +191,118 @@ const coercei32Factory = () => {
   return { coercei32, safeCoercei32 };
 };
 
+const coerceu32Factory = () => {
+  // The maximum value for a 32-bit unsigned integer.
+  const MAX = 4294967295 as const as u32; // 2**32 - 1
+  const MAX_BIGINT = 4294967295n as const; // 2**32 - 1
+  const MAX_STRING = '4294967295' as const;
+
+  const coercer = {
+    __proto__: null as never,
+
+    guardRange(value: number | bigint): true {
+      if (value < 0 || value > MAX) throw new RangeError(pre + typeof value + ' is out of 32-bit unsigned integer range: ' + value);
+      return true;
+    },
+
+    guardFloat(orig: number, int: u32): true {
+      if (orig === int) return true;
+
+      if (orig === Infinity || orig === -Infinity) throw new TypeError(invalidArg + orig);
+      if (Number.isSafeInteger(orig)) guardRange(orig);
+
+      throw new TypeError(pre + 'Call a rounding function to convert `float`: ' + orig);
+    },
+
+    guardString(orig: string, int: u32): true {
+      if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (orig === String(int)) return true;
+      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
+
+      const bi = BigInt(orig);
+      if (orig === String(bi)) guardRange(bi);
+
+      // Round-trip failed
+      throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
+    },
+
+    coerceu32(val: numable): u32 {
+      if (val == null || val !== val) throw new TypeError(invalidArg + val);
+
+      // Fast path for common cases
+      if (val === 0) {
+        if (1 / val !== 1 / 0) throw new TypeError(invalidArg + 'Negative zero');
+        return 0 as u32;
+      }
+      if (val === 0n) return 0 as u32;
+      if (val === 1 || val === 1n) return 1 as u32;
+      if (val === MAX || val === MAX_BIGINT) return MAX as u32;
+
+      if (typeof val === 'number') {
+        const v = (val >>> 0) as u32;
+        guardFloat(val, v);
+        return v;
+      }
+
+      if (typeof val === 'bigint') {
+        guardRange(val);
+        return (Number(val) >>> 0) as u32;
+      }
+
+      if (typeof val === 'string') {
+        // Hot-paths for common strings
+        if (val === '0') return 0 as u32;
+        if (val === '1') return 1 as u32;
+        if (val === MAX_STRING) return MAX as u32;
+        const v = (Number.parseInt(val, 10) >>> 0) as u32;
+        guardString(val, v);
+        return v;
+      }
+
+      throw new TypeError(invalidArg + typeTag(val));
+    },
+
+    safeCoerceu32<T>(val: numable, alt: T = 0 as T): u32 | T {
+      if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
+
+      // Fast path for common cases
+      if (val === 0) {
+        if (1 / val !== 1 / 0) return typeof alt === 'function' ? alt(val) : alt;
+        return 0 as u32;
+      }
+      if (val === 0n) return 0 as u32;
+      if (val === 1 || val === 1n) return 1 as u32;
+      if (val === MAX || val === MAX_BIGINT) return MAX as u32;
+
+      if (typeof val === 'number') {
+        const v = (val >>> 0) as u32;
+        if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
+        return v;
+      }
+
+      if (typeof val === 'bigint') {
+        if (val < 0 || val > MAX) return typeof alt === 'function' ? alt(val) : alt;
+        const v = (Number(val) >>> 0) as u32;
+        return v;
+      }
+
+      if (typeof val === 'string') {
+        const v = (Number.parseInt(val, 10) >>> 0) as u32;
+        if (String(v) !== val) return typeof alt === 'function' ? alt(val) : alt;
+        return v;
+      }
+
+      return typeof alt === 'function' ? alt(val) : alt;
+    },
+  } as const;
+
+  const { coerceu32, safeCoerceu32, guardFloat, guardRange, guardString } = coercer;
+  const pre = coerceu32.name + '(): ';
+  const invalidArg = pre + 'Invalid argument: ';
+
+  return { coerceu32, safeCoerceu32 };
+};
+
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 64-bit signed integer as a native 'bigint'.
 const coercei64Factory = () => {
   // The minimum value for a 64-bit signed integer.
@@ -191,12 +314,12 @@ const coercei64Factory = () => {
     __proto__: null as never,
 
     guardRange(value: bigint | number): true {
-      if (value < MIN || value > MAX) throw new RangeError(pre + 'Number is out of 64-bit signed integer range: ' + value);
+      if (value < MIN || value > MAX) throw new RangeError(pre + typeof value + ' is out of 64-bit signed integer range: ' + value);
       return true;
     },
     guardFloat(orig: number, int: i32 | u32): true {
       if (orig === int) return true;
-      if ((orig === Infinity) || (orig === -Infinity)) throw new TypeError(invalidArg + orig);
+      if (orig === Infinity || orig === -Infinity) throw new TypeError(invalidArg + orig);
       if (Number.isSafeInteger(orig)) throw new TypeError(pre + 'Call a rounding method to convert fraction-less `float`: ' + orig);
       throw new TypeError(pre + 'Call a rounding method to convert `float`: ' + orig);
     },
@@ -282,9 +405,109 @@ const coercei64Factory = () => {
   const pre = coercei64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
 
-  return {coercei64, safeCoercei64};
+  return { coercei64, safeCoercei64 };
 };
 
+const coerceu64Factory = () => {
+  // The maximum value for a 64-bit unsigned integer.
+  const MAX = 18446744073709551615n as const as u64; // 2**64 - 1
 
-export const {coercei32, safeCoercei32} = coercei32Factory();
-export const {coercei64, safeCoercei64} = coercei64Factory();
+  const coercer = {
+    __proto__: null as never,
+
+    guardRange(val: bigint | number): true {
+      if (val < 0 || val > MAX) throw new RangeError(pre + typeof val + ' is out of 64-bit unsigned integer range: ' + val);
+      return true;
+    },
+
+    guardFloat(orig: number, int: i32 | u32): true {
+      if (orig === int) return true;
+      if (orig === Infinity || orig === -Infinity) throw new TypeError(invalidArg + orig);
+      if (Number.isSafeInteger(orig)) throw new TypeError(pre + 'Call a rounding method to convert fraction-less `float`: ' + orig);
+      throw new TypeError(pre + 'Call a rounding method to convert `float`: ' + orig);
+    },
+
+    guardString(orig: string, int: u64): true {
+      if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (orig === String(int)) return guardRange(int);
+      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
+      throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
+    },
+
+    coerceu64(value: numable): u64 {
+      if (value == null || value !== value) throw new TypeError(invalidArg + value);
+
+      // Fast path for common cases
+      if (value === 0) {
+        if (1 / value !== 1 / 0) throw new TypeError(invalidArg + 'Negative zero');
+        return 0n as u64;
+      }
+      if (value === 0n) return 0n as u64;
+      if (value === 1 || value === 1n) return 1n as u64;
+      if (value === MAX) return MAX;
+
+      if (typeof value === 'number') {
+        const val = (value >>> 0) as u32;
+        guardFloat(value, val);
+        return BigInt(val) as u64;
+      }
+
+      if (typeof value === 'bigint') {
+        guardRange(value);
+        return (value | 0n) as u64;
+      }
+
+      if (typeof value === 'string') {
+        const val = (BigInt(value) | 0n) as u64;
+        guardString(value, val);
+        return val;
+      }
+
+      throw new TypeError(invalidArg + typeTag(value));
+    },
+    // Non-throwing coercion to u64 with an optional alternative value
+    safeCoerceu64<T>(val: numable, alt: T = 0n as T): u64 | T {
+      if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
+
+      // Fast path for common cases
+      if (val === 0) {
+        if (1 / val !== 1 / 0) return typeof alt === 'function' ? alt(val) : alt;
+        return 0n as u64;
+      }
+      if (val === 0n) return 0n as u64;
+      if (val === 1 || val === 1n) return 1n as u64;
+      if (val === MAX) return MAX;
+
+      if (typeof val === 'number') {
+        const v = (val >>> 0) as u32;
+        if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
+        return BigInt(v) as u64;
+      }
+
+      if (typeof val === 'bigint') {
+        const v = val | 0n;
+        if (v < 0n || v > MAX) return typeof alt === 'function' ? alt(val) : alt;
+        return v as u64;
+      }
+
+      if (typeof val === 'string') {
+        const v = (BigInt(val) | 0n) as u64;
+        if (v < 0n || v > MAX || String(v) !== val) return typeof alt === 'function' ? alt(val) : alt;
+        return v;
+      }
+
+      return typeof alt === 'function' ? alt(val) : alt;
+    },
+  } as const;
+
+  const { coerceu64, safeCoerceu64, guardFloat, guardRange, guardString } = coercer;
+  const pre = coerceu64.name + '(): ';
+  const invalidArg = pre + 'Invalid argument: ';
+
+  return { coerceu64, safeCoerceu64 };
+};
+
+export const { coercei32, safeCoercei32 } = coercei32Factory();
+export const { coerceu32, safeCoerceu32 } = coerceu32Factory();
+export const { coercei64, safeCoercei64 } = coercei64Factory();
+export const { coerceu64, safeCoerceu64 } = coerceu64Factory();
