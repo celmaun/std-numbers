@@ -1,3 +1,5 @@
+function asserty<T>(value: unknown): asserts value is T {}
+
 type numable = number | bigint | string;
 
 type i8 = number & { '@i8': void };
@@ -75,27 +77,24 @@ const parsei32Factory = (): ((value: numable) => i32) => {
 
     guardFloat(orig: number, int: i32): true {
       if (orig === int) {
-        if (orig === 0 && Object.is(-0, orig)) throw new TypeError(pre + 'Invalid argument: Negative zero');
+        if (orig === 0 && Object.is(-0, orig)) throw new TypeError(invalidArg + 'Negative zero');
         return true;
       }
-      
-      if (!Number.isFinite(orig)) throw new TypeError(pre + 'Invalid argument: ' + orig);
 
-      if (orig % 1 !== 0) {
-        throw new TypeError(pre + 'Invalid coercion from `float` with a non-zero fraction: ' + floatToString(orig));
-      }
+      if (!Number.isFinite(orig)) throw new TypeError(invalidArg + orig);
+      if (Number.isSafeInteger(orig)) guardRange(orig);
 
-      return true;
+      throw new TypeError(pre + 'Invalid coercion from non-integer `float`: ' + floatToString(orig));
     },
 
     guardString(orig: string, int: i32): true {
-      if (orig === '') throw new SyntaxError(pre + 'Invalid argument: Empty string');
+      if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
       if (orig === String(int)) return true;
-      if (orig.trim() === '') throw new SyntaxError(pre + 'Invalid argument: Empty string of whitespace characters');
+      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Empty string');
 
       const bi = BigInt(orig);
       if (orig === String(bi)) guardRange(bi);
-  
+
       // Round-trip failed
       throw new SyntaxError(pre + 'Invalid coercion from `string`: ' + orig);
     },
@@ -106,26 +105,26 @@ const parsei32Factory = (): ((value: numable) => i32) => {
     },
 
     // Coerce `value` to a 32-bit signed integer.
-    parsei32(value: numable): i32 {
-      if (value == null || value !== value) throw new TypeError(pre + 'Invalid argument: ' + value);
+    parsei32(value: numable | Int32Array): i32 {
+      if (value == null || value !== value) throw new TypeError(invalidArg + value);
 
       if (typeof value === 'number') {
-        const val = value | 0;
-        guardFloat(value, val as i32);
+        const val = (value | 0) as i32;
+        guardFloat(value, val);
         guardRange(value);
 
-        return val as i32;
+        return val;
       }
 
       if (typeof value === 'bigint') {
         guardRange(value);
-        return Number(value) as i32;
+        return (Number(value) | 0) as i32;
       }
 
       if (typeof value === 'string') {
-        const val = Number.parseInt(value, 10) | 0;
-        guardString(value, val as i32);
-        return val as i32;
+        const val = (Number.parseInt(value, 10) | 0) as i32;
+        guardString(value, val);
+        return val;
       }
 
       throw new TypeError(pre + 'Invalid argument type: ' + typeTag(value));
@@ -134,6 +133,7 @@ const parsei32Factory = (): ((value: numable) => i32) => {
 
   const { parsei32, guardFloat, guardRange, guardString } = parser;
   const pre = parsei32.name + '(): ';
+  const invalidArg = pre + 'Invalid argument: ';
 
   return parsei32;
 };
