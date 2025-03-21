@@ -89,7 +89,7 @@ const coerceI32Factory = () => {
     },
 
     guardString(orig: string, int: i32): true {
-      if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (orig === '') throw new SyntaxError(errEmptyStr);
       if (orig === String(int)) return true;
       if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
 
@@ -97,7 +97,7 @@ const coerceI32Factory = () => {
       if (orig === String(bi)) guardRange(bi);
 
       // Round-trip failed
-      throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
+      throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
     },
 
     // Coerce `value` to a 32-bit signed integer.
@@ -188,6 +188,7 @@ const coerceI32Factory = () => {
   const { coerceI32, safeCoerceI32, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceI32.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errEmptyStr = invalidArg + 'Empty string';
   const errBlankStr = invalidArg + 'Blank string';
   const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
@@ -218,7 +219,7 @@ const coerceU32Factory = () => {
     },
 
     guardString(orig: string, int: u32): true {
-      if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (orig === '') throw new SyntaxError(errEmptyStr);
       if (orig === String(int)) return true;
       if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
 
@@ -226,7 +227,7 @@ const coerceU32Factory = () => {
       const bi = BigInt(orig);
       if (orig === String(bi)) guardRange(bi);
       // Round-trip failed
-      throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
+      throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
     },
 
     coerceU32(val: numable): u32 {
@@ -294,6 +295,7 @@ const coerceU32Factory = () => {
   const { coerceU32, safeCoerceU32, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceU32.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errEmptyStr = invalidArg + 'Empty string';
   const errBlankStr = invalidArg + 'Blank string';
   const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
@@ -322,11 +324,11 @@ const coerceI64Factory = () => {
     },
 
     guardString(orig: string, int: i64): true {
-      if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (orig === '') throw new SyntaxError(errEmptyStr);
       if (orig === String(int)) return guardRange(int);
       if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
 
-      throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
+      throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
     },
 
     coerceI64(value: numable): i64 {
@@ -401,6 +403,7 @@ const coerceI64Factory = () => {
   const { coerceI64, safeCoerceI64, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceI64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errEmptyStr = invalidArg + 'Empty string';
   const errBlankStr = invalidArg + 'Blank string';
   const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
@@ -427,10 +430,10 @@ const coerceU64Factory = () => {
     },
 
     guardString(orig: string, int: u64): true {
-      if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (orig === '') throw new SyntaxError(errEmptyStr);
       if (orig === String(int)) return guardRange(int);
       if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
-      throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
+      throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
     },
 
     coerceU64(value: numable): u64 {
@@ -501,6 +504,7 @@ const coerceU64Factory = () => {
   const { coerceU64, safeCoerceU64, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceU64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errEmptyStr = invalidArg + 'Empty string';
   const errBlankStr = invalidArg + 'Blank string';
   const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
@@ -546,6 +550,7 @@ const coerceF64Factory = () => {
     __proto__: null as never,
 
     guardString(val: string, num: f64): true {
+      if (val === '') throw new SyntaxError(errEmptyStr);
       if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + json(val) : errBlankStr);
       if (num !== num) throw new SyntaxError(pre + 'Failed coercion from ' + json(val));
       if (num === Infinity || num === -Infinity) throw new RangeError(pre + 'Coerced string is out of 64-bit floating point range');
@@ -568,14 +573,14 @@ const coerceF64Factory = () => {
       return true;
     },
 
-    // non-throwing version of guardString()
+    // non-throwing variant of guardString()
     validateString(val: string, num: f64): boolean {
-      if (!Number.isFinite(num)) return false;
+      if (!Number.isFinite(num) || (val === '') || (/\s/.test(val))) return false;
       const nstr = String(num);
       if (val === nstr) return true;
       const vlc = val.toLowerCase();
       if (vlc === nstr) return true;
-      return !(/\s/.test(val) || vlc.startsWith(nstr) || val[0] === '+' || /^-?0[^.]/.test(val));
+      return !(vlc.startsWith(nstr) || val[0] === '+' || /^-?0[^.]/.test(val));
     },
 
     coerceF64(val: numable): f64 {
@@ -603,8 +608,6 @@ const coerceF64Factory = () => {
         if (val === 'NaN') return NaN as f64;
         if (val === 'Infinity') return Infinity as f64;
         if (val === '-Infinity') return -Infinity as f64;
-        if (val === '') throw new SyntaxError(invalidArg + 'Empty string');
-        if (val.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
         const f = +parseFloat(val) as f64; // Returns NaN on failure, note that we already handled 'NaN' and [+-]Infinity as strings above.
         guardString(val, f);
         return f;
@@ -649,6 +652,7 @@ const coerceF64Factory = () => {
   const { coerceF64, safeCoerceF64, guardString, validateString } = coercer;
   const pre = coerceF64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errEmptyStr = invalidArg + 'Empty string';
   const errBlankStr = invalidArg + 'Blank string';
   const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
