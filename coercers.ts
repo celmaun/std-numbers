@@ -163,8 +163,8 @@ const coerceI32Factory = () => {
       }
 
       if (typeof val === 'bigint') {
+        if (val < MIN_BIGINT || val > MAX_BIGINT) return typeof alt === 'function' ? alt(val) : alt;
         const v = (Number(val) | 0) as i32;
-        if (v < MIN || v > MAX) return typeof alt === 'function' ? alt(val) : alt;
         return v;
       }
 
@@ -538,6 +538,8 @@ const coerceF64Factory = () => {
     guardString(val: string, num: f64): true {
       if (num !== num) throw new SyntaxError(pre + 'Failed coercion from ' + json(val));
       if (num === Infinity || num === -Infinity) throw new RangeError(pre + 'Coerced string is out of 64-bit floating point range');
+      // Unsure if should allow leading plus sign
+      if (val[0] === '+') throw new SyntaxError(pre + 'Undesired leading plus sign in ' + json(val));
 
       const nstr = String(num); // `num` as string
       if (val === nstr) return true;
@@ -549,8 +551,7 @@ const coerceF64Factory = () => {
       const vlc = val.toLowerCase(); // `val` as lowercase string
       if (vlc === nstr) return true;
       if (vlc.startsWith(nstr)) throw new SyntaxError(pre + 'String has invalid trailing characters: ' + json(vlc.slice(nstr.length)));
-      // Unsure if should allow leading plus sign
-      if (val[0] === '+') throw new SyntaxError(pre + 'Undesired leading plus sign in ' + json(val));
+
       // Test `val` for leading zero(s), unless it's a single zero followed by a decimal point
       if (/^-?0[^.]/.test(val)) throw new SyntaxError(pre + 'Unexpected leading zero(s) in ' + json(val));
 
@@ -594,7 +595,7 @@ const coerceF64Factory = () => {
         if (val === '-Infinity') return -Infinity as f64;
         if (val === '') throw new SyntaxError(invalidArg + 'Empty string');
         if (val.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
-        const f = parseFloat(val) as f64; // Returns NaN on failure, note that we already handled 'NaN' and [+-]Infinity as strings above.
+        const f = +parseFloat(val) as f64; // Returns NaN on failure, note that we already handled 'NaN' and [+-]Infinity as strings above.
         guardString(val, f);
         return f;
       }
