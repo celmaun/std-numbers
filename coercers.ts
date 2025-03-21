@@ -276,20 +276,12 @@ const coerceu32Factory = () => {
 
       if (typeof val === 'number') {
         const v = (val >>> 0) as u32;
-        if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
-        return v;
-      }
-
-      if (typeof val === 'bigint') {
-        if (val < 0 || val > MAX) return typeof alt === 'function' ? alt(val) : alt;
-        const v = (Number(val) >>> 0) as u32;
-        return v;
-      }
-
-      if (typeof val === 'string') {
+        if (v === val) return v;
+      } else if (typeof val === 'bigint') {
+        if (val >= 0 && val <= MAX) return (Number(val) >>> 0) as u32;
+      } else if (typeof val === 'string') {
         const v = (Number.parseInt(val, 10) >>> 0) as u32;
-        if (String(v) !== val) return typeof alt === 'function' ? alt(val) : alt;
-        return v;
+        if (String(v) === val) return v;
       }
 
       return typeof alt === 'function' ? alt(val) : alt;
