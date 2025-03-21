@@ -319,7 +319,8 @@ const coerceI64Factory = () => {
     guardString(orig: string, int: i64): true {
       if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
       if (orig === String(int)) return guardRange(int);
-      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Empty string');
+      if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
+
       throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
     },
 
@@ -395,6 +396,8 @@ const coerceI64Factory = () => {
   const { coerceI64, safeCoerceI64, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceI64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errBlankStr = invalidArg + 'Blank string';
+  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
   return { coerceI64, safeCoerceI64 };
 };
