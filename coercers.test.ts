@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coercei32 } from './coercers';
+import { coerceI32 } from './coercers';
 
 const I8_MIN = -128 as const;
 const I8_MAX = 127 as const;
@@ -28,174 +28,174 @@ const F64_MIN_SAFE_INTEGER = -9007199254740991 as const;
 const F64_MAX_SAFE_INTEGER = 9007199254740991 as const;
 const F64_EPSILON = 2.2204460492503131e-16 as const;
 
-describe('Test number parsing functions', () => {
-  describe('coercei32()', () => {
+describe('Test number coercion functions', () => {
+  describe('coerceI32()', () => {
     // It should identity parse a valid i32 number
     it('should parse a valid i32 number', () => {
-      expect(coercei32(123)).toBe(123);
-      expect(coercei32(-123)).toBe(-123);
-      expect(coercei32(0)).toBe(0);
-      expect(coercei32(2147483647)).toBe(2147483647);
-      expect(coercei32(-2147483648)).toBe(-2147483648);
-      expect(coercei32(I32_MIN)).toBe(-2147483648);
-      expect(coercei32(I32_MAX)).toBe(2147483647);
+      expect(coerceI32(123)).toBe(123);
+      expect(coerceI32(-123)).toBe(-123);
+      expect(coerceI32(0)).toBe(0);
+      expect(coerceI32(2147483647)).toBe(2147483647);
+      expect(coerceI32(-2147483648)).toBe(-2147483648);
+      expect(coerceI32(I32_MIN)).toBe(-2147483648);
+      expect(coerceI32(I32_MAX)).toBe(2147483647);
     });
 
     // It should throw a RangeError on out-of-range `number` numbers
     it('should throw a RangeError on out-of-range `number` numbers', () => {
-      expect(() => coercei32(2147483648)).toThrow(RangeError);
-      expect(() => coercei32(-2147483649)).toThrow(RangeError);
-      expect(() => coercei32(41347483655548)).toThrow(RangeError);
+      expect(() => coerceI32(2147483648)).toThrow(RangeError);
+      expect(() => coerceI32(-2147483649)).toThrow(RangeError);
+      expect(() => coerceI32(41347483655548)).toThrow(RangeError);
 
-      expect(() => coercei32(I32_MIN - 1)).toThrow(RangeError);
-      expect(() => coercei32(I32_MAX + 1)).toThrow(RangeError);
-      expect(() => coercei32(U32_MAX)).toThrow(RangeError);
-      expect(() => coercei32(U32_MAX + 1)).toThrow(RangeError);
-      expect(() => coercei32(Number.MAX_SAFE_INTEGER)).toThrow(RangeError);
-      expect(() => coercei32(Number.MIN_SAFE_INTEGER)).toThrow(RangeError);
+      expect(() => coerceI32(I32_MIN - 1)).toThrow(RangeError);
+      expect(() => coerceI32(I32_MAX + 1)).toThrow(RangeError);
+      expect(() => coerceI32(U32_MAX)).toThrow(RangeError);
+      expect(() => coerceI32(U32_MAX + 1)).toThrow(RangeError);
+      expect(() => coerceI32(Number.MAX_SAFE_INTEGER)).toThrow(RangeError);
+      expect(() => coerceI32(Number.MIN_SAFE_INTEGER)).toThrow(RangeError);
     });
 
     // It should throw a TypeError for floating point numbers that are unsafe integers
     it('should throw a TypeError for floating point numbers that are not safe integers', () => {
-      expect(() => coercei32(-7414227031455547483649)).toThrow(TypeError);
+      expect(() => coerceI32(-7414227031455547483649)).toThrow(TypeError);
     });
 
     // It should throw a TypeError for floating point numbers with a non-zero fractional part
     it('should throw a TypeError for floating point numbers with a non-zero fractional part', () => {
-      expect(() => coercei32(123.456)).toThrow(TypeError);
-      expect(() => coercei32(-123.456)).toThrow(TypeError);
-      expect(() => coercei32(0.123)).toThrow(TypeError);
-      expect(() => coercei32(2147483647.123)).toThrow(TypeError);
-      expect(() => coercei32(-2147483648.123)).toThrow(TypeError);
+      expect(() => coerceI32(123.456)).toThrow(TypeError);
+      expect(() => coerceI32(-123.456)).toThrow(TypeError);
+      expect(() => coerceI32(0.123)).toThrow(TypeError);
+      expect(() => coerceI32(2147483647.123)).toThrow(TypeError);
+      expect(() => coerceI32(-2147483648.123)).toThrow(TypeError);
     });
 
     // It should throw a TypeError for Number.* constants that are not integers
     it('should throw a TypeError for Number.* constants that are not integers', () => {
-      expect(() => coercei32(Number.MAX_VALUE)).toThrow(TypeError);
-      expect(() => coercei32(Number.MIN_VALUE)).toThrow(TypeError);
-      expect(() => coercei32(Number.NaN)).toThrow(TypeError);
-      expect(() => coercei32(Number.POSITIVE_INFINITY)).toThrow(TypeError);
-      expect(() => coercei32(Number.NEGATIVE_INFINITY)).toThrow(TypeError);
-      expect(() => coercei32(Number.EPSILON)).toThrow(TypeError);
+      expect(() => coerceI32(Number.MAX_VALUE)).toThrow(TypeError);
+      expect(() => coerceI32(Number.MIN_VALUE)).toThrow(TypeError);
+      expect(() => coerceI32(Number.NaN)).toThrow(TypeError);
+      expect(() => coerceI32(Number.POSITIVE_INFINITY)).toThrow(TypeError);
+      expect(() => coerceI32(Number.NEGATIVE_INFINITY)).toThrow(TypeError);
+      expect(() => coerceI32(Number.EPSILON)).toThrow(TypeError);
     });
 
     // It should throw a TypeError for Math.* constants that are not integers
     it('should throw a TypeError for Math.* constants that are not integers', () => {
-      expect(() => coercei32(Math.PI)).toThrow(TypeError);
-      expect(() => coercei32(Math.E)).toThrow(TypeError);
-      expect(() => coercei32(Math.LN2)).toThrow(TypeError);
-      expect(() => coercei32(Math.LN10)).toThrow(TypeError);
-      expect(() => coercei32(Math.LOG2E)).toThrow(TypeError);
-      expect(() => coercei32(Math.LOG10E)).toThrow(TypeError);
-      expect(() => coercei32(Math.SQRT1_2)).toThrow(TypeError);
-      expect(() => coercei32(Math.SQRT2)).toThrow(TypeError);
+      expect(() => coerceI32(Math.PI)).toThrow(TypeError);
+      expect(() => coerceI32(Math.E)).toThrow(TypeError);
+      expect(() => coerceI32(Math.LN2)).toThrow(TypeError);
+      expect(() => coerceI32(Math.LN10)).toThrow(TypeError);
+      expect(() => coerceI32(Math.LOG2E)).toThrow(TypeError);
+      expect(() => coerceI32(Math.LOG10E)).toThrow(TypeError);
+      expect(() => coerceI32(Math.SQRT1_2)).toThrow(TypeError);
+      expect(() => coerceI32(Math.SQRT2)).toThrow(TypeError);
     });
 
     // It should coerce valid bigint numbers to i32
     it('should coerce valid bigint numbers to i32', () => {
-      expect(coercei32(123n)).toBe(123);
-      expect(coercei32(-123n)).toBe(-123);
-      expect(coercei32(0n)).toBe(0);
-      expect(coercei32(2147483647n)).toBe(2147483647);
-      expect(coercei32(-2147483648n)).toBe(-2147483648);
+      expect(coerceI32(123n)).toBe(123);
+      expect(coerceI32(-123n)).toBe(-123);
+      expect(coerceI32(0n)).toBe(0);
+      expect(coerceI32(2147483647n)).toBe(2147483647);
+      expect(coerceI32(-2147483648n)).toBe(-2147483648);
     });
 
     // It should throw a RangeError on out-of-range bigint numbers
     it('should throw a RangeError on out-of-range bigint numbers', () => {
-      expect(() => coercei32(I64_MAX)).toThrow(RangeError);
-      expect(() => coercei32(I64_MIN)).toThrow(RangeError);
-      expect(() => coercei32(41347483655548n)).toThrow(RangeError);
-      expect(() => coercei32(-7414227031455547483649n)).toThrow(RangeError);
+      expect(() => coerceI32(I64_MAX)).toThrow(RangeError);
+      expect(() => coerceI32(I64_MIN)).toThrow(RangeError);
+      expect(() => coerceI32(41347483655548n)).toThrow(RangeError);
+      expect(() => coerceI32(-7414227031455547483649n)).toThrow(RangeError);
     });
 
     it('should parse a valid integer string within valid range', () => {
-      expect(coercei32('123')).toBe(123);
+      expect(coerceI32('123')).toBe(123);
       // More strings with larger numbers but in the valid range
-      expect(coercei32('2147483647')).toBe(2147483647);
-      expect(coercei32('-2147483648')).toBe(-2147483648);
-      expect(coercei32('0')).toBe(0);
-      expect(coercei32('123456')).toBe(123456);
-      expect(coercei32('-123456')).toBe(-123456);
+      expect(coerceI32('2147483647')).toBe(2147483647);
+      expect(coerceI32('-2147483648')).toBe(-2147483648);
+      expect(coerceI32('0')).toBe(0);
+      expect(coerceI32('123456')).toBe(123456);
+      expect(coerceI32('-123456')).toBe(-123456);
     });
 
     it('should parse negative integer strings within valid range', () => {
-      expect(coercei32('-123')).toBe(-123);
-      expect(coercei32('-5657574')).toBe(-5657574);
-      expect(coercei32('-3339323')).toBe(-3339323);
+      expect(coerceI32('-123')).toBe(-123);
+      expect(coerceI32('-5657574')).toBe(-5657574);
+      expect(coerceI32('-3339323')).toBe(-3339323);
     });
 
     // It should throw a type error for undefined, null and NaN
     it('should throw a TypeError for no-argument, undefined, null and NaN', () => {
       // @ts-expect-error
-      expect(() => coercei32()).toThrow(TypeError);
-      expect(() => coercei32(undefined as any)).toThrow(TypeError);
-      expect(() => coercei32(null as any)).toThrow(TypeError);
-      expect(() => coercei32(NaN)).toThrow(TypeError);
+      expect(() => coerceI32()).toThrow(TypeError);
+      expect(() => coerceI32(undefined as any)).toThrow(TypeError);
+      expect(() => coerceI32(null as any)).toThrow(TypeError);
+      expect(() => coerceI32(NaN)).toThrow(TypeError);
     });
 
     // It should throw a type error for negative zero, Infinity and -Infinity
     it('should throw a TypeError for negative zero, Infinity and -Infinity', () => {
-      expect(() => coercei32(-0)).toThrow(TypeError);
-      expect(() => coercei32(Infinity)).toThrow(TypeError);
-      expect(() => coercei32(-Infinity)).toThrow(TypeError);
+      expect(() => coerceI32(-0)).toThrow(TypeError);
+      expect(() => coerceI32(Infinity)).toThrow(TypeError);
+      expect(() => coerceI32(-Infinity)).toThrow(TypeError);
     });
 
     it('should throw a RangeError for out-of-range numeric strings', () => {
-      expect(() => coercei32('4294967296')).toThrow(RangeError);
-      expect(() => coercei32('-4294967296')).toThrow(RangeError);
+      expect(() => coerceI32('4294967296')).toThrow(RangeError);
+      expect(() => coerceI32('-4294967296')).toThrow(RangeError);
       // Random integer strings that are out of range
-      expect(() => coercei32('2147483648')).toThrow(RangeError);
-      expect(() => coercei32('-2147483649')).toThrow(RangeError);
+      expect(() => coerceI32('2147483648')).toThrow(RangeError);
+      expect(() => coerceI32('-2147483649')).toThrow(RangeError);
 
-      expect(() => coercei32('3000000000')).toThrow(RangeError);
-      expect(() => coercei32('-3000000000')).toThrow(RangeError);
+      expect(() => coerceI32('3000000000')).toThrow(RangeError);
+      expect(() => coerceI32('-3000000000')).toThrow(RangeError);
 
-      expect(() => coercei32('76678656577657664545335')).toThrow(RangeError);
-      expect(() => coercei32('-987654323456789876543245')).toThrow(RangeError);
+      expect(() => coerceI32('76678656577657664545335')).toThrow(RangeError);
+      expect(() => coerceI32('-987654323456789876543245')).toThrow(RangeError);
     });
 
     it('should throw a SyntaxError for invalid strings', () => {
-      expect(() => coercei32('abc')).toThrow(SyntaxError);
-      expect(() => coercei32('')).toThrow(SyntaxError);
-      expect(() => coercei32('    ')).toThrow(SyntaxError);
+      expect(() => coerceI32('abc')).toThrow(SyntaxError);
+      expect(() => coerceI32('')).toThrow(SyntaxError);
+      expect(() => coerceI32('    ')).toThrow(SyntaxError);
     });
 
     it('should throw a SyntaxError for strings with a signed zero', () => {
-      expect(() => coercei32('-0')).toThrow(SyntaxError);
-      expect(() => coercei32('+0')).toThrow(SyntaxError);
+      expect(() => coerceI32('-0')).toThrow(SyntaxError);
+      expect(() => coerceI32('+0')).toThrow(SyntaxError);
     });
 
     it('should throw a SyntaxError for strings with leading non-numeric characters', () => {
-      expect(() => coercei32('abc123')).toThrow(SyntaxError);
-      expect(() => coercei32('0xFF')).toThrow(SyntaxError);
+      expect(() => coerceI32('abc123')).toThrow(SyntaxError);
+      expect(() => coerceI32('0xFF')).toThrow(SyntaxError);
     });
 
     it('should throw a SyntaxError for strings in hexadecimal format', () => {
-      expect(() => coercei32('0x123')).toThrow(SyntaxError);
-      expect(() => coercei32('-0x123')).toThrow(SyntaxError);
+      expect(() => coerceI32('0x123')).toThrow(SyntaxError);
+      expect(() => coerceI32('-0x123')).toThrow(SyntaxError);
     });
 
     it('should throw a SyntaxError for strings in octal format', () => {
-      expect(() => coercei32('0123')).toThrow(SyntaxError);
-      expect(() => coercei32('-0123')).toThrow(SyntaxError);
+      expect(() => coerceI32('0123')).toThrow(SyntaxError);
+      expect(() => coerceI32('-0123')).toThrow(SyntaxError);
     });
 
     it('should throw a SyntaxError for strings in binary format', () => {
-      expect(() => coercei32('0b101')).toThrow(SyntaxError);
-      expect(() => coercei32('-0b101')).toThrow(SyntaxError);
+      expect(() => coerceI32('0b101')).toThrow(SyntaxError);
+      expect(() => coerceI32('-0b101')).toThrow(SyntaxError);
     });
 
     // It should throw a TypeError for arguments that are not numbers or strings
     it('should throw a TypeError for arguments that are not numbers or strings', () => {
-      expect(() => coercei32({} as any)).toThrow(TypeError);
-      expect(() => coercei32([] as any)).toThrow(TypeError);
-      expect(() => coercei32((() => 123) as any)).toThrow(TypeError);
-      expect(() => coercei32(Symbol('test') as any)).toThrow(TypeError);
+      expect(() => coerceI32({} as any)).toThrow(TypeError);
+      expect(() => coerceI32([] as any)).toThrow(TypeError);
+      expect(() => coerceI32((() => 123) as any)).toThrow(TypeError);
+      expect(() => coerceI32(Symbol('test') as any)).toThrow(TypeError);
     });
 
     it('should throw a TypeError for boolean values', () => {
-      expect(() => coercei32(true as any)).toThrow(TypeError);
-      expect(() => coercei32(false as any)).toThrow(TypeError);
+      expect(() => coerceI32(true as any)).toThrow(TypeError);
+      expect(() => coerceI32(false as any)).toThrow(TypeError);
     });
   });
 });

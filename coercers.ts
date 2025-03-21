@@ -61,7 +61,7 @@ const { typeTag, strForMsg } = util;
 const json = JSON.stringify;
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
-const coercei32Factory = () => {
+const coerceI32Factory = () => {
   // The minimum value for a 32-bit signed integer.
   const MIN = -2147483648 as const as i32;
   const MIN_BIGINT = -2147483648n as const;
@@ -101,7 +101,7 @@ const coercei32Factory = () => {
     },
 
     // Coerce `value` to a 32-bit signed integer.
-    coercei32(val: numable): i32 {
+    coerceI32(val: numable): i32 {
       if (val == null || val !== val) throw new TypeError(invalidArg + val);
 
       // Fast path for common cases
@@ -142,7 +142,7 @@ const coercei32Factory = () => {
       throw new TypeError(invalidArg + typeTag(val));
     },
 
-    safeCoercei32<T>(val: numable, alt: T = 0 as T): i32 | T {
+    safeCoerceI32<T>(val: numable, alt: T = 0 as T): i32 | T {
       if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
@@ -185,14 +185,14 @@ const coercei32Factory = () => {
     },
   } as const;
 
-  const { coercei32, safeCoercei32, guardFloat, guardRange, guardString } = coercer;
-  const pre = coercei32.name + '(): ';
+  const { coerceI32, safeCoerceI32, guardFloat, guardRange, guardString } = coercer;
+  const pre = coerceI32.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
 
-  return { coercei32, safeCoercei32 };
+  return { coerceI32, safeCoerceI32 };
 };
 
-const coerceu32Factory = () => {
+const coerceU32Factory = () => {
   // The maximum value for a 32-bit unsigned integer.
   const MAX = 4294967295 as const as u32; // 2**32 - 1
   const MAX_BIGINT = 4294967295n as const; // 2**32 - 1
@@ -226,7 +226,7 @@ const coerceu32Factory = () => {
       throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
     },
 
-    coerceu32(val: numable): u32 {
+    coerceU32(val: numable): u32 {
       if (val == null || val !== val) throw new TypeError(invalidArg + val);
 
       // Fast path for common cases
@@ -262,7 +262,7 @@ const coerceu32Factory = () => {
       throw new TypeError(invalidArg + typeTag(val));
     },
 
-    safeCoerceu32<T>(val: numable, alt: T = 0 as T): u32 | T {
+    safeCoerceU32<T>(val: numable, alt: T = 0 as T): u32 | T {
       if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
@@ -288,15 +288,15 @@ const coerceu32Factory = () => {
     },
   } as const;
 
-  const { coerceu32, safeCoerceu32, guardFloat, guardRange, guardString } = coercer;
-  const pre = coerceu32.name + '(): ';
+  const { coerceU32, safeCoerceU32, guardFloat, guardRange, guardString } = coercer;
+  const pre = coerceU32.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
 
-  return { coerceu32, safeCoerceu32 };
+  return { coerceU32, safeCoerceU32 };
 };
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 64-bit signed integer as a native 'bigint'.
-const coercei64Factory = () => {
+const coerceI64Factory = () => {
   // The minimum value for a 64-bit signed integer.
   const MIN = -9223372036854775808n as const as i64;
   // The maximum value for a 64-bit signed integer.
@@ -323,7 +323,7 @@ const coercei64Factory = () => {
       throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
     },
 
-    coercei64(value: numable): i64 {
+    coerceI64(value: numable): i64 {
       if (value == null || value !== value) throw new TypeError(invalidArg + value);
 
       // Fast path for common cases
@@ -357,7 +357,7 @@ const coercei64Factory = () => {
       throw new TypeError(invalidArg + typeTag(value));
     },
     // Non-throwing coercion to i64 with an optional alternative value
-    safeCoercei64<T>(val: numable, alt: T = 0n as T): i64 | T {
+    safeCoerceI64<T>(val: numable, alt: T = 0n as T): i64 | T {
       if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
@@ -392,14 +392,14 @@ const coercei64Factory = () => {
     },
   } as const;
 
-  const { coercei64, safeCoercei64, guardFloat, guardRange, guardString } = coercer;
-  const pre = coercei64.name + '(): ';
+  const { coerceI64, safeCoerceI64, guardFloat, guardRange, guardString } = coercer;
+  const pre = coerceI64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
 
-  return { coercei64, safeCoercei64 };
+  return { coerceI64, safeCoerceI64 };
 };
 
-const coerceu64Factory = () => {
+const coerceU64Factory = () => {
   // The maximum value for a 64-bit unsigned integer.
   const MAX = 18446744073709551615n as const as u64; // 2**64 - 1
 
@@ -425,7 +425,7 @@ const coerceu64Factory = () => {
       throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
     },
 
-    coerceu64(value: numable): u64 {
+    coerceU64(value: numable): u64 {
       if (value == null || value !== value) throw new TypeError(invalidArg + value);
 
       // Fast path for common cases
@@ -457,7 +457,7 @@ const coerceu64Factory = () => {
       throw new TypeError(invalidArg + typeTag(value));
     },
     // Non-throwing coercion to u64 with an optional alternative value
-    safeCoerceu64<T>(val: numable, alt: T = 0n as T): u64 | T {
+    safeCoerceU64<T>(val: numable, alt: T = 0n as T): u64 | T {
       if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
@@ -490,11 +490,11 @@ const coerceu64Factory = () => {
     },
   } as const;
 
-  const { coerceu64, safeCoerceu64, guardFloat, guardRange, guardString } = coercer;
-  const pre = coerceu64.name + '(): ';
+  const { coerceU64, safeCoerceU64, guardFloat, guardRange, guardString } = coercer;
+  const pre = coerceU64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
 
-  return { coerceu64, safeCoerceu64 };
+  return { coerceU64, safeCoerceU64 };
 };
 
 const coerceF32Factory = () => {
@@ -642,8 +642,8 @@ const coerceF64Factory = () => {
   return { coerceF64, safeCoerceF64 };
 };
 
-export const { coercei32, safeCoercei32 } = coercei32Factory();
-export const { coerceu32, safeCoerceu32 } = coerceu32Factory();
-export const { coercei64, safeCoercei64 } = coercei64Factory();
-export const { coerceu64, safeCoerceu64 } = coerceu64Factory();
+export const { coerceI32, safeCoerceI32 } = coerceI32Factory();
+export const { coerceU32, safeCoerceU32 } = coerceU32Factory();
+export const { coerceI64, safeCoerceI64 } = coerceI64Factory();
+export const { coerceU64, safeCoerceU64 } = coerceU64Factory();
 export const { coerceF64, safeCoerceF64 } = coerceF64Factory();
