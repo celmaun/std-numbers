@@ -2,7 +2,6 @@ function asserty<T>(value: unknown): asserts value is T {}
 
 type numable = number | bigint | string;
 
-
 type i32 = number & { '@i32': void };
 type u32 = number & { '@u32': void };
 type i64 = bigint & { '@i64': void };
@@ -52,9 +51,14 @@ const util = {
     if (tag === '[object Symbol]') return 'symbol';
     return tag.slice(8, -1);
   },
+
+  strForMsg<S extends string>(value: S) {
+    return ('String(' + JSON.stringify(value) + ')') as `String("${S}")`;
+  },
 };
 
-const { typeTag } = util;
+const { typeTag, strForMsg } = util;
+const json = JSON.stringify;
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
 const coercei32Factory = () => {
@@ -218,7 +222,6 @@ const coerceu32Factory = () => {
 
       const bi = BigInt(orig);
       if (orig === String(bi)) guardRange(bi);
-
       // Round-trip failed
       throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
     },
@@ -383,9 +386,8 @@ const coercei64Factory = () => {
       }
 
       if (typeof val === 'bigint') {
-        const v = val | 0n;
-        if (v < MIN || v > MAX) return typeof alt === 'function' ? alt(val) : alt;
-        return v as i64;
+        if (val < MIN || val > MAX) return typeof alt === 'function' ? alt(val) : alt;
+        return (val | 0n) as i64;
       }
 
       if (typeof val === 'string') {
@@ -464,7 +466,7 @@ const coerceu64Factory = () => {
     },
     // Non-throwing coercion to u64 with an optional alternative value
     safeCoerceu64<T>(val: numable, alt: T = 0n as T): u64 | T {
-      if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
+      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
       if (val === 0) {
@@ -482,9 +484,8 @@ const coerceu64Factory = () => {
       }
 
       if (typeof val === 'bigint') {
-        const v = val | 0n;
-        if (v < 0n || v > MAX) return typeof alt === 'function' ? alt(val) : alt;
-        return v as u64;
+        if (val < 0n || val > MAX) return typeof alt === 'function' ? alt(val) : alt;
+        return (val | 0n) as u64;
       }
 
       if (typeof val === 'string') {
@@ -504,7 +505,153 @@ const coerceu64Factory = () => {
   return { coerceu64, safeCoerceu64 };
 };
 
+const coerceF32Factory = () => {
+  // The minimum value for a 32-bit floating point number.
+  const MIN = -3.40282347e38 as const as f32;
+  // The maximum value for a 32-bit floating point number.
+  const MAX = 3.40282347e38 as const as f32;
+  // The minimum positive value for a 32-bit floating point number.
+  const MIN_NORMAL_VALUE = 1.17549435e-38 as const as f32;
+  // The minimum safe integer value for a 32-bit floating point number.
+  const MIN_SAFE_INTEGER = -16777215 as const as f32;
+  // The maximum safe integer value for a 32-bit floating point number.
+  const MAX_SAFE_INTEGER = 16777215 as const as f32;
+  // The smallest interval between two representable numbers.
+  const EPSILON = 1.1920929e-7 as const as f32;
+
+  const coercer = {
+    __proto__: null as never,
+  } as const;
+};
+
+const coerceF64Factory = () => {
+  // The minimum value for a 64-bit floating point number.
+  const MIN = -1.7976931348623157e308 as const as f64;
+  // The maximum value for a 64-bit floating point number.
+  const MAX = 1.7976931348623157e308 as const as f64;
+  // The minimum positive value for a 64-bit floating point number.
+  const MIN_NORMAL_VALUE = 2.2250738585072014e-308 as const as f64;
+  // The minimum safe integer value for a 64-bit floating point number.
+  const MIN_INT = -9007199254740991 as const as f64;
+  const MIN_BIGINT = -9007199254740991n as const;
+  // The maximum safe integer value for a 64-bit floating point number.
+  const MAX_INT = 9007199254740991 as const as f64;
+  const MAX_BIGINT = 9007199254740991n as const;
+  // The smallest interval between two representable numbers.
+  const EPSILON = 2.2204460492503131e-16 as const as f64;
+
+  const coercer = {
+    __proto__: null as never,
+
+    guardString(val: string, num: f64): true {
+      if (num !== num) throw new SyntaxError(pre + 'Failed coercion from ' + json(val));
+      if (num === Infinity || num === -Infinity) throw new RangeError(pre + 'Coerced string is out of 64-bit floating point range');
+
+      const nstr = String(num); // `num` as string
+      if (val === nstr) return true;
+      // parseFloat() permits surrounding whitespace but we disallow whitespace entirely for consistency with other coercers.
+      if (/\s/.test(val)) throw new SyntaxError(pre + 'Unexpected whitespace in ' + json(val));
+
+      // Some extra tests for sane argument values, not required but useful for debugging
+      // Lowercase to normalize any engineering notation /[eE]/
+      const vlc = val.toLowerCase(); // `val` as lowercase string
+      if (vlc === nstr) return true;
+      if (vlc.startsWith(nstr)) throw new SyntaxError(pre + 'String has invalid trailing characters: ' + json(vlc.slice(nstr.length)));
+      // Unsure if should allow leading plus sign
+      if (val[0] === '+') throw new SyntaxError(pre + 'Undesired leading plus sign in ' + json(val));
+      // Test `val` for leading zero(s), unless it's a single zero followed by a decimal point
+      if (/^-?0[^.]/.test(val)) throw new SyntaxError(pre + 'Unexpected leading zero(s) in ' + json(val));
+
+      return true;
+    },
+
+    // non-throwing version of guardString()
+    validateString(val: string, num: f64): boolean {
+      if (!Number.isFinite(num)) return false;
+      const nstr = String(num);
+      if (val === nstr) return true;
+      const vlc = val.toLowerCase();
+      if (vlc === nstr) return true;
+      return !(/\s/.test(val) || vlc.startsWith(nstr) || val[0] === '+' || /^-?0[^.]/.test(val));
+    },
+
+    coerceF64(val: numable): f64 {
+      if (val == null) throw new TypeError(invalidArg + val);
+      if (typeof val === 'number') return +val as f64;
+
+      // Hot-paths for common cases
+      if (val === 0n) return 0 as f64;
+      if (val === 1n) return 1 as f64;
+      if (val === -1n) return -1 as f64;
+      if (val === MIN_BIGINT) return +MIN_INT as f64;
+      if (val === MAX_BIGINT) return +MAX_INT as f64;
+
+      if (typeof val === 'bigint') {
+        if (val < MIN_BIGINT || val > MAX_BIGINT)
+          throw new RangeError(pre + 'BigInt(' + val + ') is out of 64-bit floating point safe integer range');
+        return +Number(val) as f64;
+      }
+
+      if (typeof val === 'string') {
+        if (val === '-0') return -0 as f64;
+        if (val === '0') return 0 as f64;
+        if (val === '-1') return -1 as f64;
+        if (val === '1') return 1 as f64;
+        if (val === 'NaN') return NaN as f64;
+        if (val === 'Infinity') return Infinity as f64;
+        if (val === '-Infinity') return -Infinity as f64;
+        if (val === '') throw new SyntaxError(invalidArg + 'Empty string');
+        if (val.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
+        const f = parseFloat(val) as f64; // Returns NaN on failure, note that we already handled 'NaN' and [+-]Infinity as strings above.
+        guardString(val, f);
+        return f;
+      }
+
+      throw new TypeError(invalidArg + typeTag(val));
+    },
+
+    safeCoerceF64<T>(val: numable, alt: T = NaN as T): f64 | T {
+      if (val == null) return typeof alt === 'function' ? alt(val) : alt;
+      if (typeof val === 'number') return +val as f64;
+
+      // Hot-paths for common cases
+      if (val === 0n) return 0 as f64;
+      if (val === 1n) return 1 as f64;
+      if (val === -1n) return -1 as f64;
+      if (val === MIN_BIGINT) return +MIN_INT as f64;
+      if (val === MAX_BIGINT) return +MAX_INT as f64;
+
+      if (typeof val === 'bigint') {
+        if (val < MIN_BIGINT || val > MAX_BIGINT) return typeof alt === 'function' ? alt(val) : alt;
+        return +Number(val) as f64;
+      }
+
+      if (typeof val === 'string') {
+        if (val === '-0') return -0 as f64;
+        if (val === '0') return 0 as f64;
+        if (val === '-1') return -1 as f64;
+        if (val === '1') return 1 as f64;
+        if (val === 'NaN') return NaN as f64;
+        if (val === 'Infinity') return Infinity as f64;
+        if (val === '-Infinity') return -Infinity as f64;
+        if (val === '' || val.trim() === '') return typeof alt === 'function' ? alt(val) : alt;
+        const f = +parseFloat(val) as f64;
+        if (validateString(val, f)) return f;
+      }
+
+      return typeof alt === 'function' ? alt(val) : alt;
+    },
+  } as const;
+
+  const { coerceF64, safeCoerceF64, guardString, validateString } = coercer;
+  const pre = coerceF64.name + '(): ';
+  const invalidArg = pre + 'Invalid argument: ';
+
+  return { coerceF64, safeCoerceF64 };
+};
+
 export const { coercei32, safeCoercei32 } = coercei32Factory();
 export const { coerceu32, safeCoerceu32 } = coerceu32Factory();
 export const { coercei64, safeCoercei64 } = coercei64Factory();
 export const { coerceu64, safeCoerceu64 } = coerceu64Factory();
+export const { coerceF64, safeCoerceF64 } = coerceF64Factory();
