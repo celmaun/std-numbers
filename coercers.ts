@@ -91,7 +91,7 @@ const coerceI32Factory = () => {
     guardString(orig: string, int: i32): true {
       if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
       if (orig === String(int)) return true;
-      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
+      if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
 
       const bi = BigInt(orig);
       if (orig === String(bi)) guardRange(bi);
@@ -188,6 +188,8 @@ const coerceI32Factory = () => {
   const { coerceI32, safeCoerceI32, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceI32.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errBlankStr = invalidArg + 'Blank string';
+  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
   return { coerceI32, safeCoerceI32 };
 };
@@ -218,7 +220,8 @@ const coerceU32Factory = () => {
     guardString(orig: string, int: u32): true {
       if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
       if (orig === String(int)) return true;
-      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
+      if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
+
 
       const bi = BigInt(orig);
       if (orig === String(bi)) guardRange(bi);
@@ -291,6 +294,8 @@ const coerceU32Factory = () => {
   const { coerceU32, safeCoerceU32, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceU32.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errBlankStr = invalidArg + 'Blank string';
+  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
   return { coerceU32, safeCoerceU32 };
 };
@@ -424,7 +429,7 @@ const coerceU64Factory = () => {
     guardString(orig: string, int: u64): true {
       if (orig === '') throw new SyntaxError(invalidArg + 'Empty string');
       if (orig === String(int)) return guardRange(int);
-      if (orig.trim() === '') throw new SyntaxError(invalidArg + 'Blank string');
+      if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
       throw new SyntaxError(pre + 'Failed coercion from `string`: ' + orig);
     },
 
@@ -496,6 +501,8 @@ const coerceU64Factory = () => {
   const { coerceU64, safeCoerceU64, guardFloat, guardRange, guardString } = coercer;
   const pre = coerceU64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errBlankStr = invalidArg + 'Blank string';
+  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
   return { coerceU64, safeCoerceU64 };
 };
@@ -539,15 +546,15 @@ const coerceF64Factory = () => {
     __proto__: null as never,
 
     guardString(val: string, num: f64): true {
+      if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + json(val) : errBlankStr);
       if (num !== num) throw new SyntaxError(pre + 'Failed coercion from ' + json(val));
       if (num === Infinity || num === -Infinity) throw new RangeError(pre + 'Coerced string is out of 64-bit floating point range');
+
       // Unsure if should allow leading plus sign
       if (val[0] === '+') throw new SyntaxError(pre + 'Undesired leading plus sign in ' + json(val));
 
       const nstr = String(num); // `num` as string
       if (val === nstr) return true;
-      // parseFloat() permits surrounding whitespace but we disallow whitespace entirely for consistency with other coercers.
-      if (/\s/.test(val)) throw new SyntaxError(pre + 'Unexpected whitespace in ' + json(val));
 
       // Some extra tests for sane argument values, not required but useful for debugging
       // Lowercase to normalize any engineering notation /[eE]/
@@ -642,6 +649,8 @@ const coerceF64Factory = () => {
   const { coerceF64, safeCoerceF64, guardString, validateString } = coercer;
   const pre = coerceF64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
+  const errBlankStr = invalidArg + 'Blank string';
+  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
 
   return { coerceF64, safeCoerceF64 };
 };
