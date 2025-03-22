@@ -61,21 +61,21 @@ const util = {
       return json(val);
     }
 
-    // if (typeof value === 'object') {
-    //   return value instanceof Error ? value.stack || value.message : JSON.stringify(value);
-    // }
-
-    return typeof val + '(' + String(val) + ')';
+    return typeTag(val);
   },
 };
 
 const { typeTag, debugStr } = util;
 
+// Parser methods to parse strings but enforce stricter rules than the built-in BigInt methods by mandating a round-trip back to exact string.
+// Might decide to add some exceptions to the round-trip rule later on. e.g., allow plus sign aka '+123'. For now, we enforce round-trip.
 const parserFactory = () => {
+  const I64_MIN = -9223372036854775808n as const;
+
   const bi64unarr = Object.seal(BigInt64Array.of(0n));
   const bu64unarr = Object.seal(BigUint64Array.of(0n));
 
-  const isNotStr = ' is not a string';
+  const xButStr = ' passed, expected a string';
   const emptyStr = 'Empty string';
   const blankStr = 'Blank string';
   const unexpSpaceIn = 'Unexpected whitespace in ';
@@ -88,13 +88,27 @@ const parserFactory = () => {
     // Parse a string to a 64-bit signed integer.
     // NB: The array assignment will throw a SyntaxError if the string contains a decimal point or uses scientific notation.
     // We forbid certain string formats that are permitted assignment to the typed array.
-    parseBigInt64(val: string): i64 {
-      if (typeof val !== 'string') throw new TypeError(debugStr(val) + isNotStr);
+    parseI64(val: string): i64 {
+      if (typeof val !== 'string') throw new TypeError(typeTag(val) + xButStr);
       if (val === '0') return 0n as i64;
       if (val === '-1') return -1n as i64;
       if (val === '1') return 1n as i64;
       if (val === '-0') throw new SyntaxError(unexpSignedZero + debugStr(val));
       if (val === '') throw new SyntaxError(emptyStr);
+      const n = ((bi64unarr[0] = val as any), bi64unarr[0] | 0n) as i64;
+
+      // If round-trip to string fails, we try to throw the most specific error below
+      if (val === String(n)) {
+        return n;
+      }
+
+      const bi = BigInt(val) | 0n;
+      if (n !== bi) {
+        // Round-trip with arbitrary precision BigInt fails because of an overflow/underflow range error
+        if (bi < I64_MIN) throw new RangeError('Number is smaller than the minimum signed 64-bit integer: ' + debugStr(val));
+        throw new RangeError('Number is larger than the maximum signed 64-bit integer: ' + debugStr(val));
+      }
+
       const a = val[0];
       // Forbid a leading plus sign
       if (a === '+') throw new SyntaxError(unexpPlusSign + debugStr(val));
@@ -102,17 +116,33 @@ const parserFactory = () => {
       if (a === '0' || (a === '-' && val[1] === '0')) throw new SyntaxError(unexpLeadZero + debugStr(val));
       // Forbid whitespace
       if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + debugStr(val) : blankStr);
-      return (bi64unarr[0] = val as any), bi64unarr[0] as i64;
+
+      // Failed parse
+      throw new SyntaxError('Failed to parse ' + debugStr(val));
     },
     // Parse a string to a 64-bit unsigned integer.
     // NB: The array assignment will throw a SyntaxError if the string contains a decimal point or uses scientific notation.
     // We forbid certain string formats that are permitted assignment to the typed array.
-    parseBigUint64(val: string): u64 {
-      if (typeof val !== 'string') throw new TypeError(debugStr(val) + isNotStr);
+    parseU64(val: string): u64 {
+      if (typeof val !== 'string') throw new TypeError(typeTag(val) + xButStr);
       if (val === '0') return 0n as u64;
       if (val === '1') return 1n as u64;
       if (val === '-0') throw new SyntaxError(unexpSignedZero + debugStr(val));
       if (val === '') throw new SyntaxError(emptyStr);
+      const n = ((bu64unarr[0] = val as any), bu64unarr[0] | 0n) as u64;
+
+      // If round-trip to string fails, we try to throw the most specific error below
+      if (val === String(n)) {
+        return n;
+      }
+
+      const bi = BigInt(val) | 0n;
+      if (n !== bi) {
+        // Round-trip with arbitrary precision BigInt fails because of an overflow/underflow range error
+        if (bi < 0n) throw new RangeError('Number cannot be negative for unsigned integer: ' + debugStr(val));
+        throw new RangeError('Number is larger than the maximum unsigned 64-bit integer: ' + debugStr(val));
+      }
+
       const a = val[0];
       // Forbid a leading plus sign
       if (a === '+') throw new SyntaxError(unexpPlusSign + debugStr(val));
@@ -122,16 +152,18 @@ const parserFactory = () => {
       if (a === '0') throw new SyntaxError(unexpLeadZero + debugStr(val));
       // Forbid whitespace
       if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + debugStr(val) : blankStr);
-      return (bu64unarr[0] = val as any), bu64unarr[0] as u64;
+
+      // Failed parse
+      throw new SyntaxError('Failed to parse ' + debugStr(val));
     },
   };
 
-  const { parseBigInt64, parseBigUint64 } = parsers;
+  const { parseI64, parseU64 } = parsers;
 
-  return { parseBigInt64, parseBigUint64 };
+  return { parseI64, parseU64 };
 };
 
-const { parseBigInt64, parseBigUint64 } = parserFactory();
+const { parseI64, parseU64 } = parserFactory();
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
 const coerceI32Factory = () => {
@@ -379,6 +411,9 @@ const coerceI64Factory = () => {
   const MAX = 9223372036854775807n as const as i64;
   const MAX_STR = '9223372036854775807' as const;
 
+  const bi64unarr = Object.seal(BigInt64Array.of(0n));
+  const bu64unarr = Object.seal(BigUint64Array.of(0n));
+
   const coercer = {
     __proto__: null as never,
 
@@ -401,38 +436,36 @@ const coerceI64Factory = () => {
       throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
     },
 
-    coerceI64(value: numable): i64 {
-      if (value == null || value !== value) throw new TypeError(invalidArg + value);
+    coerceI64(val: numable): i64 {
+      if (val == null || val !== val) throw new TypeError(invalidArg + val);
 
       // Fast path for common cases
-      if (value === 0) {
-        if (1 / value !== 1 / 0) throw new TypeError(invalidArg + 'Negative zero');
+      if (val === 0) {
+        if (1 / val !== 1 / 0) throw new TypeError(invalidArg + 'Negative zero');
         return 0n as i64;
       }
-      if (value === 0n) return 0n as i64;
-      if (value === 1 || value === 1n) return 1n as i64;
-      if (value === -1 || value === -1n) return -1n as i64;
-      if (value === MIN) return MIN;
-      if (value === MAX) return MAX;
+      if (val === 0n) return 0n as i64;
+      if (val === 1 || val === 1n) return 1n as i64;
+      if (val === -1 || val === -1n) return -1n as i64;
+      if (val === MIN) return MIN;
+      if (val === MAX) return MAX;
 
-      if (typeof value === 'number') {
-        const val = value < 0 ? ((value | 0) as i32) : ((value >>> 0) as u32);
-        guardFloat(value, val);
-        return BigInt(val) as i64;
+      if (typeof val === 'number') {
+        const v = val < 0 ? ((val | 0) as i32) : ((val >>> 0) as u32);
+        guardFloat(val, v);
+        return BigInt(v) as i64;
       }
 
-      if (typeof value === 'bigint') {
-        guardRange(value);
-        return (value | 0n) as i64;
+      if (typeof val === 'bigint') {
+        guardRange(val);
+        return (val | 0n) as i64;
       }
 
-      if (typeof value === 'string') {
-        const val = (BigInt(value) | 0n) as i64;
-        guardString(value, val);
-        return val;
+      if (typeof val === 'string') {
+        return (parseI64(val) | 0n) as i64;
       }
 
-      throw new TypeError(invalidArg + typeTag(value));
+      throw new TypeError(invalidArg + typeTag(val));
     },
     // Non-throwing coercion to i64 with an optional alternative value
     safeCoerceI64<T>(val: numable, alt: T = 0n as T): i64 | T {
@@ -466,7 +499,7 @@ const coerceI64Factory = () => {
     },
   } as const;
 
-  const { coerceI64, safeCoerceI64, guardFloat, guardRange, guardString } = coercer;
+  const { coerceI64, safeCoerceI64, guardFloat, guardRange } = coercer;
   const pre = coerceI64.name + '(): ';
   const invalidArg = pre + 'Invalid argument: ';
   const errEmptyStr = invalidArg + 'Empty string';
@@ -532,9 +565,7 @@ const coerceU64Factory = () => {
         if (value === '1') return 1n as u64;
         if (value === MAX_STR) return MAX;
 
-        const v = (BigInt(value) | 0n) as u64;
-        guardString(value, v);
-        return v;
+        return (parseU64(value) | 0n) as u64;
       }
 
       throw new TypeError(invalidArg + typeTag(value));
