@@ -70,8 +70,12 @@ const { typeTag, debugStr } = util;
 const xButStr = ' passed, expected a string';
 const errEmptyStr = 'Empty string';
 const errBlankStr = 'Blank string';
+const skillIssue = 'Skill issue: ';
 const unexpNegZero = 'Unexpected negative zero';
 const unexpSpaceIn = 'Unexpected whitespace in ';
+const unexpSpaced = 'Unexpected surrounding whitespace in ';
+const unexpDecIn = 'Unexpected decimal in ';
+const unexpSciIn = 'Unexpected scientific notation in ';
 const unexpLeadZero = 'Unexpected leading zero in ';
 const unexpPlusSign = 'Unexpected plus sign in ';
 const unexpNegSign = 'Unexpected negative sign in ';
@@ -79,16 +83,46 @@ const unexpSignedZero = 'Unexpected signed zero in ';
 const failedParseStr = 'Failed to parse string: ';
 const cantCoerceFloat = 'Cannot coerce a floating-point number to an integer';
 const invalidArg = 'Invalid argument: ';
+const invalidArgType = 'Invalid argument type: ';
+const invalidArgVal = 'Invalid argument value: ';
+const noNegUint = 'Number cannot be negative for unsigned integers: ';
+const smallerThanI32 = 'Number is smaller than the minimum signed 32-bit integer: ';
+const largerThanI32 = 'Number is larger than the maximum signed 32-bit integer: ';
+const largerThanU32 = 'Number is larger than the maximum unsigned 32-bit integer: ';
 const smallerThanI64 = 'Number is smaller than the minimum signed 64-bit integer: ';
 const largerThanI64 = 'Number is larger than the maximum signed 64-bit integer: ';
-const noNegUint = 'Number cannot be negative for unsigned integer: '
-const largerThanU64 ='Number is larger than the maximum unsigned 64-bit integer: '
+const largerThanU64 = 'Number is larger than the maximum unsigned 64-bit integer: ';
 
-const unexpUintLead: Record<string, string> = Object.freeze({
+const unexpLeadChar: Record<string, string> = Object.freeze({
   __proto__: null as never,
   '+': 'Unexpected plus sign in ',
   '-': 'Unexpected negative sign in ',
+  '.': 'Unexpected leading decimal in ',
   '0': 'Unexpected leading zero in ',
+  '-0': 'Unexpected leading signed zero in ',
+});
+
+const unexpBinNota = 'Unexpected binary notation in ';
+const unexpOctNota = 'Unexpected octal notation in ';
+const unexpHexNota = 'Unexpected hexadecimal notation in ';
+const unexpZeroDot = 'Unexpected fraction in '
+
+const unexpLeadNota: Record<string, string> = Object.freeze({
+  __proto__: null as never,
+  '0.': unexpZeroDot,
+  '-0.': unexpZeroDot,
+  '0x': unexpHexNota,
+  '-0x': unexpHexNota,
+  '0X': unexpHexNota,
+  '-0X': unexpHexNota,
+  '0b': unexpBinNota,
+  '-0b': unexpBinNota,
+  '0B': unexpBinNota,
+  '-0B': unexpBinNota,
+  '0o': unexpOctNota,
+  '-0o': unexpOctNota,
+  '0O': unexpOctNota,
+  '-0O': unexpOctNota,
 });
 
 // Parser methods to parse strings but enforce stricter rules than the built-in BigInt methods by mandating a round-trip back to exact string.
@@ -195,77 +229,75 @@ const coerceI32Factory = () => {
   const MAX_BIGINT = 2147483647n as const;
   const MAX_STR = '2147483647' as const;
 
+  const i32Mono = Int32Array.of(1);
+  Object.seal(i32Mono);
+
   const coercer = {
     __proto__: null as never,
 
-    guardRange(value: number | bigint): true {
-      if (value < MIN || value > MAX) throw new RangeError(pre + 'Number is out of 32-bit signed integer range: ' + value);
-      return true;
+    // Called when i32 coercion failed or found negative zero.
+    coerceI32Number(x: number): never {
+      if (typeof x !== 'number') throw new TypeError(invalidArg + typeTag(x));
+      if (x === 0) throw new TypeError(1 / x !== 1 / 0 ? unexpNegZero : skillIssue + debugStr(x));
+      if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArgVal + x);
+      if (x === x >>> 0) throw new RangeError(largerThanI32 + x);
+      throw new TypeError(cantCoerceFloat + x);
     },
 
-    guardFloat(orig: number, int: i32): true {
-      if (orig === int) return true;
-
-      if (orig === Infinity || orig === -Infinity) throw new TypeError(invalidArg + orig);
-      if (Number.isSafeInteger(orig)) guardRange(orig);
-
-      throw new TypeError(pre + 'Call a rounding method to convert `float`: ' + orig);
+    // Called when round-trip w/ coerced string failed.
+    coerceI32String(s: string): never {
+      if ((s === '') || s !== s.trim()) throw new SyntaxError(s === '' ? errEmptyStr : (s.trim() === '' ? errBlankStr : unexpSpaced + debugStr(s)));
+      if (s === '-0') throw new SyntaxError(unexpNegZero);
+      if (s === String(BigInt(s))) throw new RangeError((BigInt(s) < MIN ? smallerThanI32 : largerThanI32) + debugStr(s));
+      const duo = s.slice(0, s[0] !== '-' ? 2 : 3);
+      if (unexpLeadNota[duo]) throw new SyntaxError(unexpLeadNota[duo]);
+      const uno = s.startsWith('-0') ? '-0' : s[0];
+      if (unexpLeadChar[uno]) throw new SyntaxError(unexpLeadChar[uno] + debugStr(s));
+      // Number-backed (unlike BigInt-backed) integer typed arrays allow assigning strings with decimal point & scientific notation
+      if (s.includes('.')) throw new SyntaxError(unexpDecIn);
+      if (s.includes('e') || s.includes('E')) throw new SyntaxError(unexpSciIn);
+      if (/\s/.test(s)) throw new SyntaxError(unexpSpaceIn);
+      throw new SyntaxError(failedParseStr + debugStr(s));
     },
 
-    guardString(orig: string, int: i32): true {
-      if (orig === '') throw new SyntaxError(errEmptyStr);
-      if (orig === String(int)) return true;
-      if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
-
-      const bi = BigInt(orig);
-      if (orig === String(bi)) guardRange(bi);
-
-      // Round-trip failed
-      throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
+    // Called when round-trip w/ bigint failed.
+    coerceI32BigInt(x: bigint): never {
+      throw new RangeError((x < MIN ? smallerThanI32 : largerThanI32) + debugStr(x));
     },
 
     // Coerce `value` to a 32-bit signed integer.
-    coerceI32(val: numable): i32 {
-      if (val == null || val !== val) throw new TypeError(invalidArg + val);
+    coerceI32(x: numable): i32 {
+      if (typeof x !== 'number' && typeof x !== 'bigint' && typeof x !== 'string') throw new TypeError(invalidArgType + typeTag(x));
 
-      // Fast path for common cases
-      if (val === 0) {
-        if (1 / val !== 1 / 0) throw new TypeError(unexpNegZero);
+      // Fast paths for common cases
+      if (x === 0) {
+        if (1 / x !== 1 / 0) coerceI32Number(x);
         return 0 as i32;
       }
-      if (val === 0n) return 0 as i32;
-      if (val === 1 || val === 1n) return 1 as i32;
-      if (val === -1 || val === -1n) return -1 as i32;
-      if (val === MIN || val === MAX) return (val | 0) as i32;
-      if (val === MIN_BIGINT || val === MAX_BIGINT) return (Number(val) | 0) as i32;
+      if (x === 0n || x === '0') return 0 as i32;
+      if (x === 1 || x === 1n || x === '1') return 1 as i32;
+      if (x === -1 || x === -1n || x === '-1') return -1 as i32;
+      if (x === MIN || x === MIN_BIGINT || x === MIN_STR) return MIN;
+      if (x === MAX || x === MAX_BIGINT || x === MAX_STR) return MAX;
 
-      if (typeof val === 'number') {
-        const v = (val | 0) as i32;
-        guardFloat(val, v);
-        return v;
+      if (typeof x === 'bigint') {
+        const a = Number(x);
+        const b = a | 0;
+        if (a !== b) coerceI32BigInt(x);
+        return b as i32;
       }
 
-      if (typeof val === 'bigint') {
-        guardRange(val);
-        return (Number(val) | 0) as i32;
+      if (typeof x === 'number') {
+        const n = x | 0;
+        if (x !== n) coerceI32Number(x);
+        return n as i32;
       }
 
-      if (typeof val === 'string') {
-        // Hot-paths for common strings
-        if (val === '0') return 0 as i32;
-        if (val === '1') return 1 as i32;
-        if (val === '-1') return -1 as i32;
-        if (val === MIN_STR) return MIN;
-        if (val === MAX_STR) return MAX;
+      const n = ((i32Mono[0] = x as any), i32Mono[0] | 0) as i32;
+      if (x !== String(n)) coerceI32String(x);
 
-        const v = (Number.parseInt(val, 10) | 0) as i32;
-        guardString(val, v);
-        return v;
-      }
-
-      throw new TypeError(invalidArg + typeTag(val));
+      return n;
     },
-
     safeCoerceI32<T>(val: numable, alt: T = 0 as T): i32 | T {
       if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
 
@@ -305,12 +337,7 @@ const coerceI32Factory = () => {
     },
   } as const;
 
-  const { coerceI32, safeCoerceI32, guardFloat, guardRange, guardString } = coercer;
-  const pre = coerceI32.name + '(): ';
-  const invalidArg = pre + 'Invalid argument: ';
-  const errEmptyStr = invalidArg + 'Empty string';
-  const errBlankStr = invalidArg + 'Blank string';
-  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
+  const { coerceI32, safeCoerceI32, coerceI32Number, coerceI32BigInt, coerceI32String } = coercer;
 
   return { coerceI32, safeCoerceI32 };
 };
@@ -428,11 +455,8 @@ const coerceI64Factory = () => {
   // The maximum value for a 64-bit signed integer.
   const MAX = 9223372036854775807n as const as i64;
 
-  const i64unarr = BigInt64Array.of(0n);
-  const bu64unarr = BigUint64Array.of(0n);
-
-  Object.seal(i64unarr);
-  Object.seal(bu64unarr);
+  const i64Mono = BigInt64Array.of(0n);
+  Object.seal(i64Mono);
 
   const coercer = {
     __proto__: null as never,
@@ -440,7 +464,10 @@ const coerceI64Factory = () => {
     // Throw unless `x` can be a valid i32 or u32.
     coerceI64Number(x: number): true {
       if (typeof x !== 'number') throw new TypeError(invalidArg + typeTag(x));
-      if (x === 0 && 1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
+      if (x === 0) {
+        if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
+        return true;
+      }
       if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArg + x);
       if (x === (x < 0 ? x | 0 : x >>> 0)) return true;
       throw new TypeError(cantCoerceFloat + x);
@@ -449,9 +476,10 @@ const coerceI64Factory = () => {
     // Called when round-trip w/ coerced bigint from string failed.
     coerceI64String(s: string): never {
       if (s === '') throw new SyntaxError(errEmptyStr);
+      if (s === '-0') throw new SyntaxError(unexpSignedZero + debugStr(s));
       if (s === String(BigInt(s))) throw new RangeError((BigInt(s) < MIN ? smallerThanI64 : largerThanI64) + debugStr(s));
-      if (s[0] === '+' || s[0] === '0') throw new SyntaxError(unexpUintLead[s[0]] + debugStr(s));
-      if (s[0] === '-' && s[1] === '0') throw new SyntaxError(unexpUintLead['0'] + debugStr(s));
+      if (s[0] === '+' || s[0] === '0') throw new SyntaxError(unexpLeadChar[s[0]] + debugStr(s));
+      if (s[0] === '-' && s[1] === '0') throw new SyntaxError(unexpLeadChar['0'] + debugStr(s));
       if (/\s/.test(s)) throw new SyntaxError(s.trim() ? unexpSpaceIn + debugStr(s) : errBlankStr);
       throw new SyntaxError(failedParseStr + debugStr(s));
     },
@@ -475,7 +503,7 @@ const coerceI64Factory = () => {
       if (x === MIN) return MIN;
       if (x === MAX) return MAX;
 
-      const n = ((i64unarr[0] = (typeof x === 'number' ? BigInt(x < 0 ? x | 0 : x >>> 0) : x) as bigint), i64unarr[0]) as i64;
+      const n = ((i64Mono[0] = (typeof x === 'number' ? BigInt(x < 0 ? x | 0 : x >>> 0) : x) as bigint), i64Mono[0]) as i64;
 
       if (x === n) return n;
 
