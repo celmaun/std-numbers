@@ -72,7 +72,8 @@ const errBlankStr = 'Blank string';
 const unexpNegZero = 'Unexpected negative zero';
 const unexpSpaceIn = 'Unexpected whitespace in ';
 const unexpSpaced = 'Unexpected surrounding whitespace in ';
-const cantCoerceFloat = 'Cannot coerce a floating-point number to an integer';
+const cantCoerceFloat = 'Cannot coerce a floating-point number to an integer: ';
+const cantCoerceU32 = 'Undefined behavior: attempt to coerce 32-bit unsigned to a signed integer: ';
 const invalidArg = 'Invalid argument: ';
 const invalidArgType = 'Invalid argument type: ';
 const invalidArgVal = 'Invalid argument value: ';
@@ -99,7 +100,7 @@ const coerceI32Factory = () => {
         if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0 as i32;
       }
-      if (x === 0n || x === '0') return 0 as i32;
+      if (x === 0n || x === '0' || x === '+0') return 0 as i32;
       if (x === 1 || x === 1n || x === '1') return 1 as i32;
       if (x === -1 || x === -1n || x === '-1') return -1 as i32;
       if (x === MIN || x === MIN_BIG || x === MIN_STR) return MIN;
@@ -112,12 +113,13 @@ const coerceI32Factory = () => {
       if (typeof x === 'number') {
         const n = x | 0;
         if (x !== n) {
-          throw new TypeError(Number.isFinite(x) ? cantCoerceFloat + x : invalidArgVal + x);
+          // @TODO: Take the correct course of action for the u32 case
+          throw new TypeError(Number.isFinite(x) ? (x === x >>> 0 ? cantCoerceU32 + x : cantCoerceFloat + x) : invalidArgVal + x);
         }
         return n as i32;
       }
 
-      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '') throw new SyntaxError(errEmptyStr);
       if (x === '-0') throw new SyntaxError(unexpNegZero);
       if (String(x.at(-1)).trim() === '') {
         throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
@@ -168,7 +170,7 @@ const coerceU32Factory = () => {
         return n;
       }
 
-      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '') throw new SyntaxError(errEmptyStr);
       if (x === '-0') throw new SyntaxError(unexpNegZero);
       if (String(x.at(-1)).trim() === '') {
         throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
@@ -226,7 +228,7 @@ const coerceI64Factory = () => {
         return ((i64x1[0] = x as bigint), i64x1[0] | 0n) as i64;
       }
 
-      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '') throw new SyntaxError(errEmptyStr);
       if (x === '-0') throw new SyntaxError(unexpNegZero);
       if (String(x.at(-1)).trim() === '') {
         throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
@@ -276,7 +278,7 @@ const coerceU64Factory = () => {
         return ((u64x1[0] = x as bigint), u64x1[0] | 0n) as u64;
       }
 
-      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '') throw new SyntaxError(errEmptyStr);
       if (x === '-0') throw new SyntaxError(unexpNegZero);
       if (String(x.at(-1)).trim() === '') {
         throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
@@ -396,38 +398,6 @@ const coerceF64Factory = () => {
       }
 
       throw new TypeError(invalidArg + typeTag(val));
-    },
-
-    safeCoerceF64<T>(val: numable, alt: T = NaN as T): f64 | T {
-      if (val == null) return typeof alt === 'function' ? alt(val) : alt;
-      if (typeof val === 'number') return +val as f64;
-
-      // Hot-paths for common cases
-      if (val === 0n) return 0 as f64;
-      if (val === 1n) return 1 as f64;
-      if (val === -1n) return -1 as f64;
-      if (val === MIN_BIGINT) return +MIN_INT as f64;
-      if (val === MAX_BIGINT) return +MAX_INT as f64;
-
-      if (typeof val === 'bigint') {
-        if (val < MIN_BIGINT || val > MAX_BIGINT) return typeof alt === 'function' ? alt(val) : alt;
-        return +Number(val) as f64;
-      }
-
-      if (typeof val === 'string') {
-        if (val === '-0') return -0 as f64;
-        if (val === '0') return 0 as f64;
-        if (val === '-1') return -1 as f64;
-        if (val === '1') return 1 as f64;
-        if (val === 'NaN') return NaN as f64;
-        if (val === 'Infinity') return Infinity as f64;
-        if (val === '-Infinity') return -Infinity as f64;
-        if (val === '' || val.trim() === '') return typeof alt === 'function' ? alt(val) : alt;
-        const f = +parseFloat(val) as f64;
-        if (validateString(val, f)) return f;
-      }
-
-      return typeof alt === 'function' ? alt(val) : alt;
     },
   } as const;
 
