@@ -67,63 +67,15 @@ const util = {
 
 const { typeTag, debugStr } = util;
 
-const xButStr = ' passed, expected a string';
 const errEmptyStr = 'Empty string';
 const errBlankStr = 'Blank string';
-const skillIssue = 'Skill issue: ';
 const unexpNegZero = 'Unexpected negative zero';
 const unexpSpaceIn = 'Unexpected whitespace in ';
 const unexpSpaced = 'Unexpected surrounding whitespace in ';
-const unexpDecIn = 'Unexpected decimal in ';
-const unexpSciIn = 'Unexpected scientific notation in ';
-const unexpLeadZero = 'Unexpected leading zero in ';
-const unexpPlusSign = 'Unexpected plus sign in ';
-const unexpNegSign = 'Unexpected negative sign in ';
-const unexpSignedZero = 'Unexpected signed zero in ';
-const failedParseStr = 'Failed to parse string: ';
 const cantCoerceFloat = 'Cannot coerce a floating-point number to an integer';
 const invalidArg = 'Invalid argument: ';
 const invalidArgType = 'Invalid argument type: ';
 const invalidArgVal = 'Invalid argument value: ';
-const noNegUint = 'Number cannot be negative for unsigned integers: ';
-const smallerThanI32 = 'Number is smaller than the minimum signed 32-bit integer: ';
-const largerThanI32 = 'Number is larger than the maximum signed 32-bit integer: ';
-const largerThanU32 = 'Number is larger than the maximum unsigned 32-bit integer: ';
-const smallerThanI64 = 'Number is smaller than the minimum signed 64-bit integer: ';
-const largerThanI64 = 'Number is larger than the maximum signed 64-bit integer: ';
-const largerThanU64 = 'Number is larger than the maximum unsigned 64-bit integer: ';
-
-const unexpLeadChar: Record<string, string> = Object.freeze({
-  __proto__: null as never,
-  '+': 'Unexpected plus sign in ',
-  '-': 'Unexpected negative sign in ',
-  '.': 'Unexpected leading decimal in ',
-  '0': 'Unexpected leading zero in ',
-  '-0': 'Unexpected leading signed zero in ',
-});
-
-const unexpBinNota = 'Unexpected binary notation in ';
-const unexpOctNota = 'Unexpected octal notation in ';
-const unexpHexNota = 'Unexpected hexadecimal notation in ';
-const unexpZeroDot = 'Unexpected fraction in ';
-
-const unexpLeadNota: Record<string, string> = Object.freeze({
-  __proto__: null as never,
-  '0.': unexpZeroDot,
-  '-0.': unexpZeroDot,
-  '0x': unexpHexNota,
-  '-0x': unexpHexNota,
-  '0X': unexpHexNota,
-  '-0X': unexpHexNota,
-  '0b': unexpBinNota,
-  '-0b': unexpBinNota,
-  '0B': unexpBinNota,
-  '-0B': unexpBinNota,
-  '0o': unexpOctNota,
-  '-0o': unexpOctNota,
-  '0O': unexpOctNota,
-  '-0O': unexpOctNota,
-});
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
 const coerceI32Factory = () => {
@@ -158,9 +110,10 @@ const coerceI32Factory = () => {
       }
 
       if (typeof x === 'number') {
-        if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArgVal + x);
         const n = x | 0;
-        if (x !== n) throw new TypeError(cantCoerceFloat + x);
+        if (x !== n) {
+          throw new TypeError(Number.isFinite(x) ? cantCoerceFloat + x : invalidArgVal + x);
+        }
         return n as i32;
       }
 
@@ -187,312 +140,161 @@ const coerceI32Factory = () => {
 const coerceU32Factory = () => {
   // The maximum value for a 32-bit unsigned integer.
   const MAX = 4294967295 as const as u32; // 2**32 - 1
-  const MAX_BIGINT = 4294967295n as const; // 2**32 - 1
+  const MAX_BIG = 4294967295n as const; // 2**32 - 1
   const MAX_STR = '4294967295' as const;
 
   const coercer = {
     __proto__: null as never,
+    coerceU32(x: numable): u32 {
+      if (typeof x !== 'number' && typeof x !== 'bigint' && typeof x !== 'string') throw new TypeError(invalidArgType + typeTag(x));
 
-    guardRange(value: number | bigint): true {
-      if (value < 0 || value > MAX) throw new RangeError(pre + typeof value + ' is out of 32-bit unsigned integer range: ' + value);
-      return true;
-    },
-
-    guardFloat(orig: number, int: u32): true {
-      if (orig === int) return true;
-
-      if (orig === Infinity || orig === -Infinity) throw new TypeError(invalidArg + orig);
-      if (Number.isSafeInteger(orig)) guardRange(orig);
-
-      throw new TypeError(pre + 'Call a rounding function to convert `float`: ' + orig);
-    },
-
-    guardString(orig: string, int: u32): true {
-      if (orig === '') throw new SyntaxError(errEmptyStr);
-      if (orig === String(int)) return true;
-      if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
-
-      const bi = BigInt(orig);
-      if (orig === String(bi)) guardRange(bi);
-      // Round-trip failed
-      throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
-    },
-
-    coerceU32(val: numable): u32 {
-      if (val == null || val !== val) throw new TypeError(invalidArg + val);
-
-      // Fast path for common cases
-      if (val === 0) {
-        if (1 / val !== 1 / 0) throw new TypeError(unexpNegZero);
+      // Fast paths for common cases
+      if (x === 0) {
+        if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0 as u32;
       }
-      if (val === 0n) return 0 as u32;
-      if (val === 1 || val === 1n) return 1 as u32;
-      if (val === MAX || val === MAX_BIGINT) return MAX as u32;
+      if (x === 0n) return 0 as u32;
+      if (x === 1 || x === 1n || x === '1') return 1 as u32;
+      if (x === MAX || x === MAX_BIG || x === MAX_STR) return MAX as u32;
 
-      if (typeof val === 'number') {
-        const v = (val >>> 0) as u32;
-        guardFloat(val, v);
-        return v;
+      if (typeof x === 'bigint') {
+        return (Number(BigInt.asUintN(32, x)) >>> 0) as u32;
       }
 
-      if (typeof val === 'bigint') {
-        guardRange(val);
-        return (Number(val) >>> 0) as u32;
+      if (typeof x === 'number') {
+        const n = (x >>> 0) as u32;
+        if (x !== n) {
+          throw new TypeError(Number.isFinite(x) ? cantCoerceFloat + x : invalidArgVal + x);
+        }
+        return n;
       }
 
-      if (typeof val === 'string') {
-        // Hot-paths for common strings
-        if (val === '0') return 0 as u32;
-        if (val === '1') return 1 as u32;
-        if (val === MAX_STR) return MAX;
-        const v = (Number.parseInt(val, 10) >>> 0) as u32;
-        guardString(val, v);
-        return v;
+      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '-0') throw new SyntaxError(unexpNegZero);
+      if (String(x.at(-1)).trim() === '') {
+        throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
       }
 
-      throw new TypeError(invalidArg + typeTag(val));
-    },
-
-    safeCoerceU32<T>(val: numable, alt: T = 0 as T): u32 | T {
-      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
-
-      // Fast path for common cases
-      if (val === 0) {
-        if (1 / val !== 1 / 0) return typeof alt === 'function' ? alt(val) : alt;
-        return 0 as u32;
-      }
-      if (val === 0n) return 0 as u32;
-      if (val === 1 || val === 1n) return 1 as u32;
-      if (val === MAX || val === MAX_BIGINT) return MAX as u32;
-
-      if (typeof val === 'number') {
-        const v = (val >>> 0) as u32;
-        if (v === val) return v;
-      } else if (typeof val === 'bigint') {
-        if (val >= 0n && val <= MAX_BIGINT) return (Number(val) >>> 0) as u32;
-      } else if (typeof val === 'string' && val[0] !== '-' && !/\s/.test(val)) {
-        const v = (Number.parseInt(val, 10) >>> 0) as u32;
-        if (String(v) === val) return v;
-      }
-
-      return typeof alt === 'function' ? alt(val) : alt;
+      // BigInt constructor has the sanest behavior for parsing integer strings.
+      // Prepend plus sign so we don't have to check for leading whitespace.
+      const a = x[0];
+      const pre = a !== '-' && a !== '+' && a !== '0' ? '+' : '';
+      return (Number(BigInt.asUintN(32, BigInt(pre + x))) >>> 0) as u32;
     },
   } as const;
 
-  const { coerceU32, safeCoerceU32, guardFloat, guardRange, guardString } = coercer;
-  const pre = coerceU32.name + '(): ';
-  const invalidArg = pre + 'Invalid argument: ';
-  const errEmptyStr = invalidArg + 'Empty string';
-  const errBlankStr = invalidArg + 'Blank string';
-  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
+  const { coerceU32 } = coercer;
 
-  return { coerceU32, safeCoerceU32 };
+  return coerceU32;
 };
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 64-bit signed integer as a native 'bigint'.
 const coerceI64Factory = () => {
   // The minimum value for a 64-bit signed integer.
   const MIN = -9223372036854775808n as const as i64;
+  const MIN_STR = '-9223372036854775808' as const;
   // The maximum value for a 64-bit signed integer.
   const MAX = 9223372036854775807n as const as i64;
-
+  const MAX_STR = '9223372036854775807' as const;
   const i64x1 = BigInt64Array.of(1n);
   Object.seal(i64x1);
 
   const coercer = {
     __proto__: null as never,
-
-    // Throw unless `x` can be a valid i32 or u32.
-    coerceI64Number(x: number): true {
-      if (typeof x !== 'number') throw new TypeError(invalidArg + typeTag(x));
-      if (x === 0) throw new TypeError(1 / x !== 1 / 0 ? unexpNegZero : skillIssue + debugStr(x));
-      if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArgVal + x);
-      if (x === (x < 0 ? x | 0 : x >>> 0)) throw new TypeError(skillIssue + x);
-      throw new TypeError(cantCoerceFloat + x);
-    },
-
-    // Called when round-trip w/ coerced bigint from string failed.
-    coerceI64String(s: string): never {
-      if (s === '') throw new SyntaxError(errEmptyStr);
-      if (s === '-0') throw new SyntaxError(unexpSignedZero + debugStr(s));
-      if (s === String(BigInt(s))) throw new RangeError((BigInt(s) < MIN ? smallerThanI64 : largerThanI64) + debugStr(s));
-      if (s[0] === '+' || s[0] === '0') throw new SyntaxError(unexpLeadChar[s[0]] + debugStr(s));
-      if (s[0] === '-' && s[1] === '0') throw new SyntaxError(unexpLeadChar['0'] + debugStr(s));
-      if (/\s/.test(s)) throw new SyntaxError(s.trim() ? unexpSpaceIn + debugStr(s) : errBlankStr);
-      throw new SyntaxError(failedParseStr + debugStr(s));
-    },
-
-    // Called when round-trip w/ coerced bigint failed.
-    coerceI64BigInt(x: bigint): never {
-      throw new RangeError((x < MIN ? smallerThanI64 : largerThanI64) + debugStr(x));
-    },
-
     coerceI64(x: numable): i64 {
       if (typeof x !== 'number' && typeof x !== 'bigint' && typeof x !== 'string') throw new TypeError(invalidArg + typeTag(x));
 
       // Fast paths for common cases
       if (x === 0) {
-        if (1 / x !== 1 / 0) coerceI64Number(x);
+        if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0n as i64;
       }
       if (x === 0n || x === '0') return 0n as i64;
       if (x === 1 || x === 1n || x === '1') return 1n as i64;
       if (x === -1 || x === -1n || x === '-1') return -1n as i64;
-      if (x === MIN) return MIN;
-      if (x === MAX) return MAX;
+      if (x === MIN || x === MIN_STR) return MIN;
+      if (x === MAX || x === MAX_STR) return MAX;
 
       if (typeof x === 'number') {
         const n = x < 0 ? x | 0 : x >>> 0;
-        if (x !== n) coerceI64Number(x);
-        return ((i64x1[0] = BigInt(x)), i64x1[0] | 0n) as i64;
+        if (x !== n) {
+          throw new TypeError(Number.isFinite(x) ? cantCoerceFloat + x : invalidArgVal + x);
+        }
+        return ((i64x1[0] = BigInt(n)), i64x1[0] | 0n) as i64;
       }
-
-      const n = ((i64x1[0] = x as bigint), i64x1[0] | 0n) as i64;
-
-      if (x === n) return n;
 
       if (typeof x === 'bigint') {
-        coerceI64BigInt(x);
-      } else if (x !== String(n)) {
-        coerceI64String(x);
+        return ((i64x1[0] = x as bigint), i64x1[0] | 0n) as i64;
       }
 
-      return n;
-    },
-    // Non-throwing coercion to i64 with an optional alternative value
-    safeCoerceI64<T>(val: numable, alt: T = 0n as T): i64 | T {
-      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
-
-      // Fast path for common cases
-      if (val === 0) {
-        if (1 / val !== 1 / 0) return typeof alt === 'function' ? alt(val) : alt;
-        return 0n as i64;
-      }
-      if (val === 0n) return 0n as i64;
-      if (val === 1 || val === 1n) return 1n as i64;
-      if (val === -1 || val === -1n) return -1n as i64;
-      if (val === MIN) return MIN;
-      if (val === MAX) return MAX;
-
-      if (typeof val === 'number') {
-        const v = val < 0 ? ((val | 0) as i32) : ((val >>> 0) as u32);
-        if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
-        return BigInt(v) as i64;
-      } else if (typeof val === 'bigint') {
-        if (val < MIN || val > MAX) return typeof alt === 'function' ? alt(val) : alt;
-        return (val | 0n) as i64;
-      } else if (typeof val === 'string' && !/\s/.test(val)) {
-        const v = (BigInt(val) | 0n) as i64;
-        if (String(v) !== val || v < MIN || v > MAX) return typeof alt === 'function' ? alt(val) : alt;
-        return v;
+      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '-0') throw new SyntaxError(unexpNegZero);
+      if (String(x.at(-1)).trim() === '') {
+        if (x.trim() === '') throw new SyntaxError(errBlankStr);
+        throw new SyntaxError(unexpSpaced + debugStr(x));
       }
 
-      return typeof alt === 'function' ? alt(val) : alt;
+      // Prepend plus sign so we don't have to check for leading whitespace.
+      const a = x[0];
+      const pre = a !== '-' && a !== '+' && a !== '0' ? '+' : '';
+      return ((i64x1[0] = (pre + x) as any), i64x1[0] | 0n) as i64;
     },
   } as const;
 
-  const { coerceI64, safeCoerceI64, coerceI64String, coerceI64Number, coerceI64BigInt } = coercer;
-  return { coerceI64, safeCoerceI64 };
+  const { coerceI64 } = coercer;
+  return coerceI64;
 };
 
 const coerceU64Factory = () => {
   // The maximum value for a 64-bit unsigned integer.
   const MAX = 18446744073709551615n as const as u64; // 2**64 - 1
   const MAX_STR = '18446744073709551615' as const;
+  const u64x1 = BigUint64Array.of(1n);
+  Object.seal(u64x1);
 
   const coercer = {
     __proto__: null as never,
+    coerceU64(x: numable): u64 {
+      if (typeof x !== 'number' && typeof x !== 'bigint' && typeof x !== 'string') throw new TypeError(invalidArg + typeTag(x));
 
-    guardRange(val: bigint | number): true {
-      if (val < 0 || val > MAX) throw new RangeError(pre + typeof val + ' is out of 64-bit unsigned integer range: ' + val);
-      return true;
-    },
-
-    guardFloat(orig: number, int: i32 | u32): true {
-      if (orig === int) return true;
-      if (orig === Infinity || orig === -Infinity) throw new TypeError(invalidArg + orig);
-      if (Number.isSafeInteger(orig)) throw new TypeError(pre + 'Call a rounding method to convert fraction-less `float`: ' + orig);
-      throw new TypeError(pre + 'Call a rounding method to convert `float`: ' + orig);
-    },
-
-    guardString(orig: string, int: u64): true {
-      if (orig === '') throw new SyntaxError(errEmptyStr);
-      if (orig === String(int)) return guardRange(int);
-      if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
-      throw new SyntaxError(pre + 'Failed coercion from  ' + json(orig));
-    },
-
-    coerceU64(value: numable): u64 {
-      if (value == null || value !== value) throw new TypeError(invalidArg + value);
-
-      // Fast path for common cases
-      if (value === 0) {
-        if (1 / value !== 1 / 0) throw new TypeError(unexpNegZero);
+      // Fast paths for common cases
+      if (x === 0) {
+        if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0n as u64;
       }
-      if (value === 0n) return 0n as u64;
-      if (value === 1 || value === 1n) return 1n as u64;
-      if (value === MAX) return MAX;
+      if (x === 0n || x === '0') return 0n as u64;
+      if (x === 1n || x === 1 || x === '1') return 1n as u64;
+      if (x === MAX || x === MAX_STR) return MAX;
 
-      if (typeof value === 'number') {
-        const v = (value >>> 0) as u32;
-        guardFloat(value, v);
-        return BigInt(v) as u64;
+      if (typeof x === 'number') {
+        const n = x >>> 0;
+        if (x !== n) {
+          throw new TypeError(Number.isFinite(x) ? cantCoerceFloat + x : invalidArgVal + x);
+        }
+        return ((u64x1[0] = BigInt(n)), u64x1[0] | 0n) as u64;
       }
 
-      if (typeof value === 'bigint') {
-        guardRange(value);
-        return (value | 0n) as u64;
+      if (typeof x === 'bigint') {
+        return ((u64x1[0] = x as bigint), u64x1[0] | 0n) as u64;
       }
 
-      if (typeof value === 'string') {
-        if (value === '0') return 0n as u64;
-        if (value === '-1') return -1n as u64;
-        if (value === '1') return 1n as u64;
-        if (value === MAX_STR) return MAX;
-
-        return (parseU64(value) | 0n) as u64;
+      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '-0') throw new SyntaxError(unexpNegZero);
+      if (String(x.at(-1)).trim() === '') {
+        if (x.trim() === '') throw new SyntaxError(errBlankStr);
+        throw new SyntaxError(unexpSpaced + debugStr(x));
       }
 
-      throw new TypeError(invalidArg + typeTag(value));
-    },
-    // Non-throwing coercion to u64 with an optional alternative value
-    safeCoerceU64<T>(val: numable, alt: T = 0n as T): u64 | T {
-      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
-
-      // Fast path for common cases
-      if (val === 0) {
-        // Negative zero?
-        if (1 / val !== 1 / 0) return typeof alt === 'function' ? alt(val) : alt;
-        return 0n as u64;
-      }
-      if (val === 0n) return 0n as u64;
-      if (val === 1 || val === 1n) return 1n as u64;
-      if (val === MAX) return MAX;
-
-      if (typeof val === 'number') {
-        const v = (val >>> 0) as u32;
-        if (v === val) return (BigInt(v) | 0n) as u64;
-      } else if (typeof val === 'bigint') {
-        if (val >= 0n && val <= MAX) return (val | 0n) as u64;
-      } else if (typeof val === 'string' && val[0] !== '-' && !/\s/.test(val)) {
-        const v = (BigInt(val) | 0n) as u64;
-        if (v >= 0n && v <= MAX && String(v) === val) return v;
-      }
-
-      return typeof alt === 'function' ? alt(val) : alt;
+      // Prepend plus sign so we don't have to check for leading whitespace.
+      const a = x[0];
+      const pre = a !== '-' && a !== '+' && a !== '0' ? '+' : '';
+      return ((u64x1[0] = (pre + x) as any), u64x1[0] | 0n) as u64;
     },
   } as const;
 
-  const { coerceU64, safeCoerceU64, guardFloat, guardRange, guardString } = coercer;
-  const pre = coerceU64.name + '(): ';
-  const invalidArg = pre + 'Invalid argument: ';
-  const errEmptyStr = invalidArg + 'Empty string';
-  const errBlankStr = invalidArg + 'Blank string';
-  const unexpSpaceIn = pre + 'Unexpected whitespace in ';
+  const { coerceU64 } = coercer;
 
-  return { coerceU64, safeCoerceU64 };
+  return coerceU64;
 };
 
 const coerceF32Factory = () => {
@@ -632,13 +434,14 @@ const coerceF64Factory = () => {
     },
   } as const;
 
-  const { coerceF64, safeCoerceF64, guardString, validateString } = coercer;
+  const { coerceF64, guardString, validateString } = coercer;
 
-  return { coerceF64, safeCoerceF64 };
+  return coerceF64;
 };
 
 export const coerceI32 = coerceI32Factory();
-export const { coerceU32 } = coerceU32Factory();
-export const { coerceI64 } = coerceI64Factory();
-export const { coerceU64 } = coerceU64Factory();
-export const { coerceF64 } = coerceF64Factory();
+export const coerceU32 = coerceU32Factory();
+export const coerceI64 = coerceI64Factory();
+export const coerceU64 = coerceU64Factory();
+export const coerceF32 = coerceF32Factory();
+export const coerceF64 = coerceF64Factory();
