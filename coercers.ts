@@ -105,7 +105,7 @@ const unexpLeadChar: Record<string, string> = Object.freeze({
 const unexpBinNota = 'Unexpected binary notation in ';
 const unexpOctNota = 'Unexpected octal notation in ';
 const unexpHexNota = 'Unexpected hexadecimal notation in ';
-const unexpZeroDot = 'Unexpected fraction in '
+const unexpZeroDot = 'Unexpected fraction in ';
 
 const unexpLeadNota: Record<string, string> = Object.freeze({
   __proto__: null as never,
@@ -229,8 +229,8 @@ const coerceI32Factory = () => {
   const MAX_BIGINT = 2147483647n as const;
   const MAX_STR = '2147483647' as const;
 
-  const i32Mono = Int32Array.of(1);
-  Object.seal(i32Mono);
+  const i32x1 = Int32Array.of(1);
+  Object.seal(i32x1);
 
   const coercer = {
     __proto__: null as never,
@@ -246,7 +246,7 @@ const coerceI32Factory = () => {
 
     // Called when round-trip w/ coerced string failed.
     coerceI32String(s: string): never {
-      if ((s === '') || s !== s.trim()) throw new SyntaxError(s === '' ? errEmptyStr : (s.trim() === '' ? errBlankStr : unexpSpaced + debugStr(s)));
+      if (s === '' || s !== s.trim()) throw new SyntaxError(s === '' ? errEmptyStr : s.trim() === '' ? errBlankStr : unexpSpaced + debugStr(s));
       if (s === '-0') throw new SyntaxError(unexpNegZero);
       if (s === String(BigInt(s))) throw new RangeError((BigInt(s) < MIN ? smallerThanI32 : largerThanI32) + debugStr(s));
       const duo = s.slice(0, s[0] !== '-' ? 2 : 3);
@@ -293,7 +293,7 @@ const coerceI32Factory = () => {
         return n as i32;
       }
 
-      const n = ((i32Mono[0] = x as any), i32Mono[0] | 0) as i32;
+      const n = ((i32x1[0] = x as any), i32x1[0] | 0) as i32;
       if (x !== String(n)) coerceI32String(x);
 
       return n;
@@ -455,8 +455,8 @@ const coerceI64Factory = () => {
   // The maximum value for a 64-bit signed integer.
   const MAX = 9223372036854775807n as const as i64;
 
-  const i64Mono = BigInt64Array.of(0n);
-  Object.seal(i64Mono);
+  const i64x1 = BigInt64Array.of(1n);
+  Object.seal(i64x1);
 
   const coercer = {
     __proto__: null as never,
@@ -464,12 +464,9 @@ const coerceI64Factory = () => {
     // Throw unless `x` can be a valid i32 or u32.
     coerceI64Number(x: number): true {
       if (typeof x !== 'number') throw new TypeError(invalidArg + typeTag(x));
-      if (x === 0) {
-        if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
-        return true;
-      }
-      if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArg + x);
-      if (x === (x < 0 ? x | 0 : x >>> 0)) return true;
+      if (x === 0) throw new TypeError(1 / x !== 1 / 0 ? unexpNegZero : skillIssue + debugStr(x));
+      if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArgVal + x);
+      if (x === (x < 0 ? x | 0 : x >>> 0)) throw new TypeError(skillIssue + x);
       throw new TypeError(cantCoerceFloat + x);
     },
 
@@ -497,22 +494,26 @@ const coerceI64Factory = () => {
         if (1 / x !== 1 / 0) coerceI64Number(x);
         return 0n as i64;
       }
-      if (x === 0n) return 0n as i64;
-      if (x === 1 || x === 1n) return 1n as i64;
-      if (x === -1 || x === -1n) return -1n as i64;
+      if (x === 0n || x === '0') return 0n as i64;
+      if (x === 1 || x === 1n || x === '1') return 1n as i64;
+      if (x === -1 || x === -1n || x === '-1') return -1n as i64;
       if (x === MIN) return MIN;
       if (x === MAX) return MAX;
 
-      const n = ((i64Mono[0] = (typeof x === 'number' ? BigInt(x < 0 ? x | 0 : x >>> 0) : x) as bigint), i64Mono[0]) as i64;
+      if (typeof x === 'number') {
+        const n = x < 0 ? x | 0 : x >>> 0;
+        if (x !== n) coerceI64Number(x);
+        return ((i64x1[0] = BigInt(x)), i64x1[0] | 0n) as i64;
+      }
+
+      const n = ((i64x1[0] = x as bigint), i64x1[0] | 0n) as i64;
 
       if (x === n) return n;
 
       if (typeof x === 'bigint') {
         coerceI64BigInt(x);
-      } else if (typeof x === 'number') {
-        coerceI64Number(x);
-      } else {
-        x === String(n) || coerceI64String(x);
+      } else if (x !== String(n)) {
+        coerceI64String(x);
       }
 
       return n;
