@@ -36,6 +36,8 @@ const F64_MIN_SAFE_INTEGER = -9007199254740991 as const;
 const F64_MAX_SAFE_INTEGER = 9007199254740991 as const;
 const F64_EPSILON = 2.2204460492503131e-16 as const;
 
+const json = JSON.stringify;
+
 const util = {
   __proto__: null as never,
   typeTag(value: unknown): string {
@@ -52,24 +54,95 @@ const util = {
     return tag.slice(8, -1);
   },
 
-  strForMsg<S extends string>(value: S) {
-    return ('String(' + JSON.stringify(value) + ')') as `String("${S}")`;
+  debugStr(val: unknown): string {
+    if (val == null || val === true || val === false || val !== val || val == Infinity || val === -Infinity) return String(val);
+
+    if (typeof val === 'string') {
+      return json(val);
+    }
+
+    // if (typeof value === 'object') {
+    //   return value instanceof Error ? value.stack || value.message : JSON.stringify(value);
+    // }
+
+    return typeof val + '(' + String(val) + ')';
   },
 };
 
-const { typeTag, strForMsg } = util;
-const json = JSON.stringify;
+const { typeTag, debugStr } = util;
+
+const parserFactory = () => {
+  const bi64unarr = Object.seal(BigInt64Array.of(0n));
+  const bu64unarr = Object.seal(BigUint64Array.of(0n));
+
+  const isNotStr = ' is not a string';
+  const emptyStr = 'Empty string';
+  const blankStr = 'Blank string';
+  const unexpSpaceIn = 'Unexpected whitespace in ';
+  const unexpLeadZero = 'Unexpected leading zero in ';
+  const unexpPlusSign = 'Unexpected plus sign in ';
+  const unexpNegSign = 'Unexpected negative sign in ';
+  const unexpSignedZero = 'Unexpected signed zero in ';
+
+  const parsers = {
+    // Parse a string to a 64-bit signed integer.
+    // NB: The array assignment will throw a SyntaxError if the string contains a decimal point or uses scientific notation.
+    // We forbid certain string formats that are permitted assignment to the typed array.
+    parseBigInt64(val: string): i64 {
+      if (typeof val !== 'string') throw new TypeError(debugStr(val) + isNotStr);
+      if (val === '0') return 0n as i64;
+      if (val === '-1') return -1n as i64;
+      if (val === '1') return 1n as i64;
+      if (val === '-0') throw new SyntaxError(unexpSignedZero + debugStr(val));
+      if (val === '') throw new SyntaxError(emptyStr);
+      const a = val[0];
+      // Forbid a leading plus sign
+      if (a === '+') throw new SyntaxError(unexpPlusSign + debugStr(val));
+      // Forbid binary, octal, and hexadecimal strings (0bD, 0oD, 0xD) by checking for a leading zero
+      if (a === '0' || (a === '-' && val[1] === '0')) throw new SyntaxError(unexpLeadZero + debugStr(val));
+      // Forbid whitespace
+      if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + debugStr(val) : blankStr);
+      return (bi64unarr[0] = val as any), bi64unarr[0] as i64;
+    },
+    // Parse a string to a 64-bit unsigned integer.
+    // NB: The array assignment will throw a SyntaxError if the string contains a decimal point or uses scientific notation.
+    // We forbid certain string formats that are permitted assignment to the typed array.
+    parseBigUint64(val: string): u64 {
+      if (typeof val !== 'string') throw new TypeError(debugStr(val) + isNotStr);
+      if (val === '0') return 0n as u64;
+      if (val === '1') return 1n as u64;
+      if (val === '-0') throw new SyntaxError(unexpSignedZero + debugStr(val));
+      if (val === '') throw new SyntaxError(emptyStr);
+      const a = val[0];
+      // Forbid a leading plus sign
+      if (a === '+') throw new SyntaxError(unexpPlusSign + debugStr(val));
+      // Forbid underflow by checking for a negative sign
+      if (a === '-') throw new SyntaxError(unexpNegSign + debugStr(val));
+      // Forbid binary, octal, and hexadecimal strings (0bD, 0oD, 0xD) by checking for a leading zero
+      if (a === '0') throw new SyntaxError(unexpLeadZero + debugStr(val));
+      // Forbid whitespace
+      if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + debugStr(val) : blankStr);
+      return (bu64unarr[0] = val as any), bu64unarr[0] as u64;
+    },
+  };
+
+  const { parseBigInt64, parseBigUint64 } = parsers;
+
+  return { parseBigInt64, parseBigUint64 };
+};
+
+const { parseBigInt64, parseBigUint64 } = parserFactory();
 
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
 const coerceI32Factory = () => {
   // The minimum value for a 32-bit signed integer.
   const MIN = -2147483648 as const as i32;
   const MIN_BIGINT = -2147483648n as const;
-  const MIN_STRING = '-2147483648' as const;
+  const MIN_STR = '-2147483648' as const;
   // The maximum value for a 32-bit signed integer.
   const MAX = 2147483647 as const as i32;
   const MAX_BIGINT = 2147483647n as const;
-  const MAX_STRING = '2147483647' as const;
+  const MAX_STR = '2147483647' as const;
 
   const coercer = {
     __proto__: null as never,
@@ -131,8 +204,8 @@ const coerceI32Factory = () => {
         if (val === '0') return 0 as i32;
         if (val === '1') return 1 as i32;
         if (val === '-1') return -1 as i32;
-        if (val === MIN_STRING) return MIN;
-        if (val === MAX_STRING) return MAX;
+        if (val === MIN_STR) return MIN;
+        if (val === MAX_STR) return MAX;
 
         const v = (Number.parseInt(val, 10) | 0) as i32;
         guardString(val, v);
@@ -143,7 +216,7 @@ const coerceI32Factory = () => {
     },
 
     safeCoerceI32<T>(val: numable, alt: T = 0 as T): i32 | T {
-      if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
+      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
       if (val === 0) {
@@ -160,21 +233,17 @@ const coerceI32Factory = () => {
         const v = (val | 0) as i32;
         if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
         return v;
-      }
-
-      if (typeof val === 'bigint') {
+      } else if (typeof val === 'bigint') {
         if (val < MIN_BIGINT || val > MAX_BIGINT) return typeof alt === 'function' ? alt(val) : alt;
         const v = (Number(val) | 0) as i32;
         return v;
-      }
-
-      if (typeof val === 'string') {
+      } else if (typeof val === 'string') {
         // Hot-paths for common strings
         if (val === '0') return 0 as i32;
         if (val === '1') return 1 as i32;
         if (val === '-1') return -1 as i32;
-        if (val === MIN_STRING) return MIN;
-        if (val === MAX_STRING) return MAX;
+        if (val === MIN_STR) return MIN;
+        if (val === MAX_STR) return MAX;
 
         const v = (Number.parseInt(val, 10) | 0) as i32;
         if (String(v) !== val) return typeof alt === 'function' ? alt(val) : alt;
@@ -199,7 +268,7 @@ const coerceU32Factory = () => {
   // The maximum value for a 32-bit unsigned integer.
   const MAX = 4294967295 as const as u32; // 2**32 - 1
   const MAX_BIGINT = 4294967295n as const; // 2**32 - 1
-  const MAX_STRING = '4294967295' as const;
+  const MAX_STR = '4294967295' as const;
 
   const coercer = {
     __proto__: null as never,
@@ -222,7 +291,6 @@ const coerceU32Factory = () => {
       if (orig === '') throw new SyntaxError(errEmptyStr);
       if (orig === String(int)) return true;
       if (/\s/.test(orig)) throw new SyntaxError(orig.trim() ? unexpSpaceIn + json(orig) : errBlankStr);
-
 
       const bi = BigInt(orig);
       if (orig === String(bi)) guardRange(bi);
@@ -257,7 +325,7 @@ const coerceU32Factory = () => {
         // Hot-paths for common strings
         if (val === '0') return 0 as u32;
         if (val === '1') return 1 as u32;
-        if (val === MAX_STRING) return MAX as u32;
+        if (val === MAX_STR) return MAX;
         const v = (Number.parseInt(val, 10) >>> 0) as u32;
         guardString(val, v);
         return v;
@@ -267,7 +335,7 @@ const coerceU32Factory = () => {
     },
 
     safeCoerceU32<T>(val: numable, alt: T = 0 as T): u32 | T {
-      if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
+      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
       if (val === 0) {
@@ -282,8 +350,8 @@ const coerceU32Factory = () => {
         const v = (val >>> 0) as u32;
         if (v === val) return v;
       } else if (typeof val === 'bigint') {
-        if (val >= 0 && val <= MAX) return (Number(val) >>> 0) as u32;
-      } else if (typeof val === 'string') {
+        if (val >= 0n && val <= MAX_BIGINT) return (Number(val) >>> 0) as u32;
+      } else if (typeof val === 'string' && val[0] !== '-' && !/\s/.test(val)) {
         const v = (Number.parseInt(val, 10) >>> 0) as u32;
         if (String(v) === val) return v;
       }
@@ -306,8 +374,10 @@ const coerceU32Factory = () => {
 const coerceI64Factory = () => {
   // The minimum value for a 64-bit signed integer.
   const MIN = -9223372036854775808n as const as i64;
+  const MIN_STR = '-9223372036854775808' as const;
   // The maximum value for a 64-bit signed integer.
   const MAX = 9223372036854775807n as const as i64;
+  const MAX_STR = '9223372036854775807' as const;
 
   const coercer = {
     __proto__: null as never,
@@ -366,7 +436,7 @@ const coerceI64Factory = () => {
     },
     // Non-throwing coercion to i64 with an optional alternative value
     safeCoerceI64<T>(val: numable, alt: T = 0n as T): i64 | T {
-      if (val == null || val !== val) return typeof alt === 'function' ? alt(val) : alt;
+      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
 
       // Fast path for common cases
       if (val === 0) {
@@ -383,14 +453,10 @@ const coerceI64Factory = () => {
         const v = val < 0 ? ((val | 0) as i32) : ((val >>> 0) as u32);
         if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
         return BigInt(v) as i64;
-      }
-
-      if (typeof val === 'bigint') {
+      } else if (typeof val === 'bigint') {
         if (val < MIN || val > MAX) return typeof alt === 'function' ? alt(val) : alt;
         return (val | 0n) as i64;
-      }
-
-      if (typeof val === 'string') {
+      } else if (typeof val === 'string' && !/\s/.test(val)) {
         const v = (BigInt(val) | 0n) as i64;
         if (String(v) !== val || v < MIN || v > MAX) return typeof alt === 'function' ? alt(val) : alt;
         return v;
@@ -413,6 +479,7 @@ const coerceI64Factory = () => {
 const coerceU64Factory = () => {
   // The maximum value for a 64-bit unsigned integer.
   const MAX = 18446744073709551615n as const as u64; // 2**64 - 1
+  const MAX_STR = '18446744073709551615' as const;
 
   const coercer = {
     __proto__: null as never,
@@ -449,9 +516,9 @@ const coerceU64Factory = () => {
       if (value === MAX) return MAX;
 
       if (typeof value === 'number') {
-        const val = (value >>> 0) as u32;
-        guardFloat(value, val);
-        return BigInt(val) as u64;
+        const v = (value >>> 0) as u32;
+        guardFloat(value, v);
+        return BigInt(v) as u64;
       }
 
       if (typeof value === 'bigint') {
@@ -460,9 +527,14 @@ const coerceU64Factory = () => {
       }
 
       if (typeof value === 'string') {
-        const val = (BigInt(value) | 0n) as u64;
-        guardString(value, val);
-        return val;
+        if (value === '0') return 0n as u64;
+        if (value === '-1') return -1n as u64;
+        if (value === '1') return 1n as u64;
+        if (value === MAX_STR) return MAX;
+
+        const v = (BigInt(value) | 0n) as u64;
+        guardString(value, v);
+        return v;
       }
 
       throw new TypeError(invalidArg + typeTag(value));
@@ -473,6 +545,7 @@ const coerceU64Factory = () => {
 
       // Fast path for common cases
       if (val === 0) {
+        // Negative zero?
         if (1 / val !== 1 / 0) return typeof alt === 'function' ? alt(val) : alt;
         return 0n as u64;
       }
@@ -482,19 +555,12 @@ const coerceU64Factory = () => {
 
       if (typeof val === 'number') {
         const v = (val >>> 0) as u32;
-        if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
-        return BigInt(v) as u64;
-      }
-
-      if (typeof val === 'bigint') {
-        if (val < 0n || val > MAX) return typeof alt === 'function' ? alt(val) : alt;
-        return (val | 0n) as u64;
-      }
-
-      if (typeof val === 'string') {
+        if (v === val) return (BigInt(v) | 0n) as u64;
+      } else if (typeof val === 'bigint') {
+        if (val >= 0n && val <= MAX) return (val | 0n) as u64;
+      } else if (typeof val === 'string' && val[0] !== '-' && !/\s/.test(val)) {
         const v = (BigInt(val) | 0n) as u64;
-        if (v < 0n || v > MAX || String(v) !== val) return typeof alt === 'function' ? alt(val) : alt;
-        return v;
+        if (v >= 0n && v <= MAX && String(v) === val) return v;
       }
 
       return typeof alt === 'function' ? alt(val) : alt;
@@ -575,7 +641,7 @@ const coerceF64Factory = () => {
 
     // non-throwing variant of guardString()
     validateString(val: string, num: f64): boolean {
-      if (!Number.isFinite(num) || (val === '') || (/\s/.test(val))) return false;
+      if (!Number.isFinite(num) || val === '' || /\s/.test(val)) return false;
       const nstr = String(num);
       if (val === nstr) return true;
       const vlc = val.toLowerCase();
