@@ -120,8 +120,7 @@ const coerceI32Factory = () => {
       if (x === '') throw new TypeError(errEmptyStr);
       if (x === '-0') throw new SyntaxError(unexpNegZero);
       if (String(x.at(-1)).trim() === '') {
-        if (x.trim() === '') throw new SyntaxError(errBlankStr);
-        throw new SyntaxError(unexpSpaced + debugStr(x));
+        throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
       }
 
       // BigInt constructor has the sanest behavior for parsing integer strings.
@@ -230,8 +229,7 @@ const coerceI64Factory = () => {
       if (x === '') throw new TypeError(errEmptyStr);
       if (x === '-0') throw new SyntaxError(unexpNegZero);
       if (String(x.at(-1)).trim() === '') {
-        if (x.trim() === '') throw new SyntaxError(errBlankStr);
-        throw new SyntaxError(unexpSpaced + debugStr(x));
+        throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
       }
 
       // Prepend plus sign so we don't have to check for leading whitespace.
@@ -281,8 +279,7 @@ const coerceU64Factory = () => {
       if (x === '') throw new TypeError(errEmptyStr);
       if (x === '-0') throw new SyntaxError(unexpNegZero);
       if (String(x.at(-1)).trim() === '') {
-        if (x.trim() === '') throw new SyntaxError(errBlankStr);
-        throw new SyntaxError(unexpSpaced + debugStr(x));
+        throw new SyntaxError(x.trim() === '' ? errBlankStr : unexpSpaced + debugStr(x));
       }
 
       // Prepend plus sign so we don't have to check for leading whitespace.
