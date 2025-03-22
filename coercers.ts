@@ -125,221 +125,63 @@ const unexpLeadNota: Record<string, string> = Object.freeze({
   '-0O': unexpOctNota,
 });
 
-// Parser methods to parse strings but enforce stricter rules than the built-in BigInt methods by mandating a round-trip back to exact string.
-// Might decide to add some exceptions to the round-trip rule later on. e.g., allow plus sign aka '+123'. For now, we enforce round-trip.
-const parserFactory = () => {
-  const I64_MIN = -9223372036854775808n as const;
-
-  const bi64unarr = BigInt64Array.of(0n);
-  const bu64unarr = BigUint64Array.of(0n);
-
-  Object.seal(bi64unarr);
-  Object.seal(bu64unarr);
-
-  const parsers = {
-    // Parse a string to a 64-bit signed integer.
-    // NB: The array assignment will throw a SyntaxError if the string contains a decimal point or uses scientific notation.
-    // We forbid certain string formats that are permitted assignment to the typed array.
-    parseI64(val: string): i64 {
-      if (typeof val !== 'string') throw new TypeError(typeTag(val) + xButStr);
-      if (val === '0') return 0n as i64;
-      if (val === '-1') return -1n as i64;
-      if (val === '1') return 1n as i64;
-      if (val === '-0') throw new SyntaxError(unexpSignedZero + debugStr(val));
-      if (val === '') throw new SyntaxError(errEmptyStr);
-      const n = ((bi64unarr[0] = val as any), bi64unarr[0] | 0n) as i64;
-
-      // If round-trip to string fails, we try to throw the most specific error below
-      if (val === String(n)) {
-        return n;
-      }
-
-      const bi = BigInt(val) | 0n;
-      if (n !== bi) {
-        // Round-trip with arbitrary precision BigInt fails because of an overflow/underflow range error
-        if (bi < I64_MIN) throw new RangeError(smallerThanI64 + debugStr(val));
-        throw new RangeError(largerThanI64 + debugStr(val));
-      }
-
-      const a = val[0];
-      // Forbid a leading plus sign
-      if (a === '+') throw new SyntaxError(unexpPlusSign + debugStr(val));
-      // Forbid binary, octal, and hexadecimal strings (0bD, 0oD, 0xD) by checking for a leading zero
-      if (a === '0' || (a === '-' && val[1] === '0')) throw new SyntaxError(unexpLeadZero + debugStr(val));
-      // Forbid whitespace
-      if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + debugStr(val) : errBlankStr);
-
-      // Failed parse
-      throw new SyntaxError('Failed to parse ' + debugStr(val));
-    },
-    // Parse a string to a 64-bit unsigned integer.
-    // NB: The array assignment will throw a SyntaxError if the string contains a decimal point or uses scientific notation.
-    // We forbid certain string formats that are permitted assignment to the typed array.
-    parseU64(val: string): u64 {
-      if (typeof val !== 'string') throw new TypeError(typeTag(val) + xButStr);
-      if (val === '0') return 0n as u64;
-      if (val === '1') return 1n as u64;
-      if (val === '-0') throw new SyntaxError(unexpSignedZero + debugStr(val));
-      if (val === '') throw new SyntaxError(errEmptyStr);
-
-      const n = ((bu64unarr[0] = val as any), bu64unarr[0] | 0n) as u64;
-
-      // If round-trip to string fails, we try to throw the most specific error below
-      if (val === String(n)) {
-        return n;
-      }
-
-      const bi = BigInt(val) | 0n;
-      if (n !== bi) {
-        // Round-trip with arbitrary precision BigInt fails because of an overflow/underflow range error
-        if (bi < 0n) throw new RangeError(noNegUint + debugStr(val));
-        throw new RangeError(largerThanU64 + debugStr(val));
-      }
-
-      const a = val[0];
-      // Forbid a leading plus sign
-      if (a === '+') throw new SyntaxError(unexpPlusSign + debugStr(val));
-      // Forbid underflow by checking for a negative sign
-      if (a === '-') throw new SyntaxError(unexpNegSign + debugStr(val));
-      // Forbid binary, octal, and hexadecimal strings (0bD, 0oD, 0xD) by checking for a leading zero
-      if (a === '0') throw new SyntaxError(unexpLeadZero + debugStr(val));
-      // Forbid whitespace
-      if (/\s/.test(val)) throw new SyntaxError(val.trim() ? unexpSpaceIn + debugStr(val) : errBlankStr);
-
-      // Failed parse
-      throw new SyntaxError('Failed to parse ' + debugStr(val));
-    },
-  };
-
-  const { parseI64, parseU64 } = parsers;
-
-  return { parseI64, parseU64 };
-};
-
-const { parseI64, parseU64 } = parserFactory();
-
 // Returns a coercer function that coerces a value (of type 'number' | 'bigint' | 'string' ) to a 32-bit signed integer.
 const coerceI32Factory = () => {
   // The minimum value for a 32-bit signed integer.
   const MIN = -2147483648 as const as i32;
-  const MIN_BIGINT = -2147483648n as const;
+  const MIN_BIG = -2147483648n as const;
   const MIN_STR = '-2147483648' as const;
   // The maximum value for a 32-bit signed integer.
   const MAX = 2147483647 as const as i32;
-  const MAX_BIGINT = 2147483647n as const;
+  const MAX_BIG = 2147483647n as const;
   const MAX_STR = '2147483647' as const;
-
-  const i32x1 = Int32Array.of(1);
-  Object.seal(i32x1);
 
   const coercer = {
     __proto__: null as never,
-
-    // Called when i32 coercion failed or found negative zero.
-    coerceI32Number(x: number): never {
-      if (typeof x !== 'number') throw new TypeError(invalidArg + typeTag(x));
-      if (x === 0) throw new TypeError(1 / x !== 1 / 0 ? unexpNegZero : skillIssue + debugStr(x));
-      if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArgVal + x);
-      if (x === x >>> 0) throw new RangeError(largerThanI32 + x);
-      throw new TypeError(cantCoerceFloat + x);
-    },
-
-    // Called when round-trip w/ coerced string failed.
-    coerceI32String(s: string): never {
-      if (s === '' || s !== s.trim()) throw new SyntaxError(s === '' ? errEmptyStr : s.trim() === '' ? errBlankStr : unexpSpaced + debugStr(s));
-      if (s === '-0') throw new SyntaxError(unexpNegZero);
-      if (s === String(BigInt(s))) throw new RangeError((BigInt(s) < MIN ? smallerThanI32 : largerThanI32) + debugStr(s));
-      const duo = s.slice(0, s[0] !== '-' ? 2 : 3);
-      if (unexpLeadNota[duo]) throw new SyntaxError(unexpLeadNota[duo]);
-      const uno = s.startsWith('-0') ? '-0' : s[0];
-      if (unexpLeadChar[uno]) throw new SyntaxError(unexpLeadChar[uno] + debugStr(s));
-      // Number-backed (unlike BigInt-backed) integer typed arrays allow assigning strings with decimal point & scientific notation
-      if (s.includes('.')) throw new SyntaxError(unexpDecIn);
-      if (s.includes('e') || s.includes('E')) throw new SyntaxError(unexpSciIn);
-      if (/\s/.test(s)) throw new SyntaxError(unexpSpaceIn);
-      throw new SyntaxError(failedParseStr + debugStr(s));
-    },
-
-    // Called when round-trip w/ bigint failed.
-    coerceI32BigInt(x: bigint): never {
-      throw new RangeError((x < MIN ? smallerThanI32 : largerThanI32) + debugStr(x));
-    },
-
     // Coerce `value` to a 32-bit signed integer.
     coerceI32(x: numable): i32 {
       if (typeof x !== 'number' && typeof x !== 'bigint' && typeof x !== 'string') throw new TypeError(invalidArgType + typeTag(x));
 
       // Fast paths for common cases
       if (x === 0) {
-        if (1 / x !== 1 / 0) coerceI32Number(x);
+        if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0 as i32;
       }
       if (x === 0n || x === '0') return 0 as i32;
       if (x === 1 || x === 1n || x === '1') return 1 as i32;
       if (x === -1 || x === -1n || x === '-1') return -1 as i32;
-      if (x === MIN || x === MIN_BIGINT || x === MIN_STR) return MIN;
-      if (x === MAX || x === MAX_BIGINT || x === MAX_STR) return MAX;
+      if (x === MIN || x === MIN_BIG || x === MIN_STR) return MIN;
+      if (x === MAX || x === MAX_BIG || x === MAX_STR) return MAX;
 
       if (typeof x === 'bigint') {
-        const a = Number(x);
-        const b = a | 0;
-        if (a !== b) coerceI32BigInt(x);
-        return b as i32;
+        return (Number(BigInt.asIntN(32, x)) | 0) as i32;
       }
 
       if (typeof x === 'number') {
+        if (x !== x || x === Infinity || x === -Infinity) throw new TypeError(invalidArgVal + x);
         const n = x | 0;
-        if (x !== n) coerceI32Number(x);
+        if (x !== n) throw new TypeError(cantCoerceFloat + x);
         return n as i32;
       }
 
-      const n = ((i32x1[0] = x as any), i32x1[0] | 0) as i32;
-      if (x !== String(n)) coerceI32String(x);
-
-      return n;
-    },
-    safeCoerceI32<T>(val: numable, alt: T = 0 as T): i32 | T {
-      if (val == null || val !== val || val === '') return typeof alt === 'function' ? alt(val) : alt;
-
-      // Fast path for common cases
-      if (val === 0) {
-        if (1 / val !== 1 / 0) return typeof alt === 'function' ? alt(val) : alt;
-        return 0 as i32;
-      }
-      if (val === 0n) return 0 as i32;
-      if (val === 1 || val === 1n) return 1 as i32;
-      if (val === -1 || val === -1n) return -1 as i32;
-      if (val === MIN || val === MAX) return (val | 0) as i32;
-      if (val === MIN_BIGINT || val === MAX_BIGINT) return (Number(val) | 0) as i32;
-
-      if (typeof val === 'number') {
-        const v = (val | 0) as i32;
-        if (v !== val) return typeof alt === 'function' ? alt(val) : alt;
-        return v;
-      } else if (typeof val === 'bigint') {
-        if (val < MIN_BIGINT || val > MAX_BIGINT) return typeof alt === 'function' ? alt(val) : alt;
-        const v = (Number(val) | 0) as i32;
-        return v;
-      } else if (typeof val === 'string') {
-        // Hot-paths for common strings
-        if (val === '0') return 0 as i32;
-        if (val === '1') return 1 as i32;
-        if (val === '-1') return -1 as i32;
-        if (val === MIN_STR) return MIN;
-        if (val === MAX_STR) return MAX;
-
-        const v = (Number.parseInt(val, 10) | 0) as i32;
-        if (String(v) !== val) return typeof alt === 'function' ? alt(val) : alt;
-        return v;
+      if (x === '') throw new TypeError(errEmptyStr);
+      if (x === '-0') throw new SyntaxError(unexpNegZero);
+      if (String(x.at(-1)).trim() === '') {
+        if (x.trim() === '') throw new SyntaxError(errBlankStr);
+        throw new SyntaxError(unexpSpaced + debugStr(x));
       }
 
-      return typeof alt === 'function' ? alt(val) : alt;
+      // BigInt constructor has the sanest behavior for parsing integer strings.
+      // Prepend plus sign so we don't have to check for leading whitespace.
+      const a = x[0];
+      const pre = a !== '-' && a !== '+' && a !== '0' ? '+' : '';
+      return (Number(BigInt.asIntN(32, BigInt(pre + x))) | 0) as i32;
     },
   } as const;
 
-  const { coerceI32, safeCoerceI32, coerceI32Number, coerceI32BigInt, coerceI32String } = coercer;
+  const { coerceI32 } = coercer;
 
-  return { coerceI32, safeCoerceI32 };
+  return coerceI32;
 };
 
 const coerceU32Factory = () => {
@@ -795,8 +637,8 @@ const coerceF64Factory = () => {
   return { coerceF64, safeCoerceF64 };
 };
 
-export const { coerceI32, safeCoerceI32 } = coerceI32Factory();
-export const { coerceU32, safeCoerceU32 } = coerceU32Factory();
-export const { coerceI64, safeCoerceI64 } = coerceI64Factory();
-export const { coerceU64, safeCoerceU64 } = coerceU64Factory();
-export const { coerceF64, safeCoerceF64 } = coerceF64Factory();
+export const coerceI32 = coerceI32Factory();
+export const { coerceU32 } = coerceU32Factory();
+export const { coerceI64 } = coerceI64Factory();
+export const { coerceU64 } = coerceU64Factory();
+export const { coerceF64 } = coerceF64Factory();
