@@ -38,12 +38,9 @@ const { json, typeTag, debugStr, preserveNames } = util;
 const i64x2 = BigInt64Array.of(0n, 0n);
 Object.seal(i64x2);
 
-const INT64_MIN_VALUE = -9223372036854775808n;
-const INT64_MAX_VALUE = 9223372036854775807n;
-
 const Int64Static = {
   isInt64(x) {
-    return typeof x === 'function' && Object.prototype.toString.call(x) === '[object Int64]';
+    return typeof x === 'function' && Object.prototype.toString.call(x) === '[object Int64.macro]';
   },
 };
 
@@ -61,9 +58,9 @@ function Int64(x = 0n) {
     return (i64x2[0] = typeof x === 'number' ? BigInt(x) : x), i64x2[0] | 0n;
   }
 
-  let val = typeof x === 'number' ? BigInt(x) : typeof x === 'function' && Object.prototype.toString.call(x) === '[object Int64]' ? x() : x;
-
   // @ts-expect-error
+  let val = typeof x === 'number' ? BigInt(x) : isInt64(x) ? x() : x;
+
   val = ((i64x2[0] = val), i64x2[0] | 0n);
 
   const getSetInt64 = (...args) => {
@@ -74,12 +71,11 @@ function Int64(x = 0n) {
   };
 
   Object.setPrototypeOf(getSetInt64, null);
-  // @ts-expect-error
   return Object.freeze(
     Object.defineProperties(getSetInt64, {
       constructor: { value: Int64 },
-      name: { value: 'getSetInt64' },
-      [Symbol.toStringTag]: { get: () => 'Int64' },
+      name: { value: 'Int64.macro' },
+      [Symbol.toStringTag]: { get: () => 'Int64.macro' },
     })
   );
 }
@@ -87,8 +83,6 @@ function Int64(x = 0n) {
 preserveNames({ Int64 });
 
 Object.defineProperties(Int64, {
-  MIN_VALUE: { value: INT64_MIN_VALUE },
-  MAX_VALUE: { value: INT64_MAX_VALUE },
   isInt64: { value: isInt64 },
   [Symbol.hasInstance]: { value: isInt64 },
 });

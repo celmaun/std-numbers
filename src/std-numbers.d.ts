@@ -2,18 +2,16 @@ declare module 'std-numbers' {
   export function globalizeStdNumbers(globalThis: typeof globalThis): void;
 }
 
-interface Int64 {
+interface Int64 extends null {
   (): bigint;
-  (value: bigint): bigint;
-  protoqtype: null;
+  (newValue: bigint): bigint;
+  prototype: null;
 }
 
 interface Int64Constructor {
   new (x?: bigint | number | string | Int64): Int64;
   (x: bigint | number | string | Int64): bigint;
   isInt64(x: unknown): x is Int64;
-  MIN_VALUE: bigint;
-  MAX_VALUE: bigint;
   prototype: Int64;
 }
 
