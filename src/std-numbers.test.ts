@@ -29,8 +29,8 @@ describe('Test Int64', () => {
     // should be able to set the value of an Int64 instance
     it('should be able to set the value of an Int64 instance', () => {
       const int = new Int64(123);
-      int[0] = 456n;
-      expect(int[0]).toBe(456n);
+      int(456n);
+      expect(int()).toBe(456n);
     });
   });
 
@@ -38,20 +38,20 @@ describe('Test Int64', () => {
     it('should add two Int64 instances', () => {
       const int1 = new Int64(123);
       const int2 = new Int64(456);
-      expect(int1[0] + int2[0]).toBe(579n);
+      expect(int1() + int2()).toBe(579n);
     });
 
     it('should subtract two Int64 instances', () => {
       const int1 = new Int64(123);
       const int2 = new Int64(456);
-      expect(int1[0] - int2[0]).toBe(-333n);
+      expect(int1() - int2()).toBe(-333n);
     });
     it('should add two Int64 instances and return an Int64 instance', () => {
       const int1 = new Int64(123);
       const int2 = new Int64(456);
-      const result = new Int64(int1[0] + int2[0]);
+      const result = new Int64(int1() + int2());
       expect(result).toBeInstanceOf(Int64);
-      expect(result.valueOf()).toBe(579n);
+      expect(result()).toBe(579n);
     });
   });
 });

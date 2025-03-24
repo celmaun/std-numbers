@@ -3,12 +3,14 @@ declare module 'std-numbers' {
 }
 
 interface Int64 {
-  get [0](): bigint;
-  set [0](value: bigint);
+  (): bigint;
+  (value: bigint): bigint;
+  protoqtype: null;
 }
 
 interface Int64Constructor {
   new (x?: bigint | number | string | Int64): Int64;
+  (x: bigint | number | string | Int64): bigint;
   isInt64(x: unknown): x is Int64;
   MIN_VALUE: bigint;
   MAX_VALUE: bigint;
