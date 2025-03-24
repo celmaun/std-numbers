@@ -158,11 +158,31 @@ function i64TagUnary(op: NumericUnaryOperator, value: i64): i64 {
 }
 
 const isTemplateUnary = (tsa: unknown) => {
-  return Array.isArray(tsa) && tsa.length === 2 && typeof tsa[0] === 'string' && tsa[0] !== '' && tsa[1] === '';
+  return (
+    (tsa != null)
+    && (typeof tsa === 'object')
+    && Array.isArray(tsa)
+    && (tsa.length === 2)
+    && (typeof tsa[0] === 'string')
+    && (typeof tsa[1] === 'string')
+    && (tsa[0].trim() !== '')
+    && (tsa[1].trim() === '')
+  );
 };
 
 const isTemplateInfix = (tsa: unknown) => {
-  return Array.isArray(tsa) && tsa.length === 3 && tsa[0] === '' && typeof tsa[1] === 'string' && tsa[1] !== '' && tsa[2] === '';
+  return (
+    (tsa != null)
+    && (typeof tsa === 'object')
+    && Array.isArray(tsa)
+    && (tsa.length === 3)
+    && (typeof tsa[0] === 'string')
+    && (typeof tsa[1] === 'string')
+    && (typeof tsa[2] === 'string')
+    && (tsa[0].trim() === '')
+    && (tsa[1].trim() !== '')
+    && (tsa[2].trim() === '')
+  );
 };
 
 interface i64Methods {
@@ -174,11 +194,11 @@ const i64Methods: i64Methods = {
   // Compare two integer values
   cmp(left, right) {
     if (left == null || right == null) {
-      throw new TypeError('i64.compare(): Missing arguments');
+      throw new TypeError('i64.cmp(): Missing arguments');
     }
 
     if (!isSafe(left) || !isSafe(right)) {
-      throw new TypeError('i64.compare(): `left` and `right` are not comparable');
+      throw new TypeError('i64.cmp(): `left` and `right` are not comparable');
     }
 
     if (left < right) return -1;
