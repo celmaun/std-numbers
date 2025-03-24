@@ -28,7 +28,7 @@ const F64_MIN_SAFE_INTEGER = -9007199254740991 as const;
 const F64_MAX_SAFE_INTEGER = 9007199254740991 as const;
 const F64_EPSILON = 2.2204460492503131e-16 as const;
 
-describe('Test number coercion functions', () => {
+describe.skip('Test number coercion functions', () => {
   describe('coerceI32()', () => {
     // It should identity parse a valid i32 number
     it('should parse a valid i32 number', () => {

@@ -72,6 +72,7 @@ const errBlankStr = 'Blank string';
 const unexpNegZero = 'Unexpected negative zero';
 const unexpSpaceIn = 'Unexpected whitespace in ';
 const unexpSpaced = 'Unexpected surrounding whitespace in ';
+const unexpMinus = 'Unexpected minus sign for an unsigned integer: ';
 const cantCoerceFloat = 'Cannot coerce a floating-point number to an integer: ';
 const cantCoerceU32 = 'Undefined behavior: attempt to coerce 32-bit unsigned to a signed integer: ';
 const invalidArg = 'Invalid argument: ';
@@ -154,7 +155,7 @@ const coerceU32Factory = () => {
         if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0 as u32;
       }
-      if (x === 0n) return 0 as u32;
+      if (x === 0n || x === '0' || x === '+0') return 0 as u32;
       if (x === 1 || x === 1n || x === '1') return 1 as u32;
       if (x === MAX || x === MAX_BIG || x === MAX_STR) return MAX as u32;
 
@@ -179,7 +180,8 @@ const coerceU32Factory = () => {
       // BigInt constructor has the sanest behavior for parsing integer strings.
       // Prepend plus sign so we don't have to check for leading whitespace.
       const a = x[0];
-      const pre = a !== '-' && a !== '+' && a !== '0' ? '+' : '';
+      if (a === '-1') throw new SyntaxError(unexpMinus + debugStr(x));
+      const pre = a !== '+' && a !== '0' ? '+' : '';
       return (Number(BigInt.asUintN(32, BigInt(pre + x))) >>> 0) as u32;
     },
   } as const;
@@ -210,7 +212,7 @@ const coerceI64Factory = () => {
         if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0n as i64;
       }
-      if (x === 0n || x === '0') return 0n as i64;
+      if (x === 0n || x === '0' || x === '+0') return 0n as i64;
       if (x === 1 || x === 1n || x === '1') return 1n as i64;
       if (x === -1 || x === -1n || x === '-1') return -1n as i64;
       if (x === MIN || x === MIN_STR) return MIN;
@@ -262,7 +264,7 @@ const coerceU64Factory = () => {
         if (1 / x !== 1 / 0) throw new TypeError(unexpNegZero);
         return 0n as u64;
       }
-      if (x === 0n || x === '0') return 0n as u64;
+      if (x === 0n || x === '0' || x === '+0') return 0n as u64;
       if (x === 1n || x === 1 || x === '1') return 1n as u64;
       if (x === MAX || x === MAX_STR) return MAX;
 
@@ -286,7 +288,8 @@ const coerceU64Factory = () => {
 
       // Prepend plus sign so we don't have to check for leading whitespace.
       const a = x[0];
-      const pre = a !== '-' && a !== '+' && a !== '0' ? '+' : '';
+      if (a === '-') throw new SyntaxError(unexpMinus + debugStr(x));
+      const pre = a !== '+' && a !== '0' ? '+' : '';
       return ((u64x1[0] = (pre + x) as any), u64x1[0] | 0n) as u64;
     },
   } as const;

@@ -1,26 +1,36 @@
 {
-	"name": "std-numbers",
-	"version": "0.0.0",
-	"description": "Standard functions for numbers",
-	"main": "index.js",
-	"module": "index.mjs",
-	"author": "celmaun",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/celmaun/std-numbers.git"
-	},
-	"scripts": {
-		"test": "vitest"
-	},
-	"devDependencies": {
-		"@vitest/ui": "3.0.9",
-		"typescript": "^5.8.2",
-		"vitest": "^3.0.9"
-	},
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"esbuild"
-		]
-	}
+  "name": "std-numbers",
+  "version": "0.0.0",
+  "description": "Standard functions for numbers",
+  "main": "index.js",
+  "module": "index.mjs",
+  "author": "celmaun",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/celmaun/std-numbers.git"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:browser": "vitest --workspace=vitest.workspace.ts"
+  },
+  "devDependencies": {
+    "@vitest/browser": "^3.0.9",
+    "@vitest/ui": "3.0.9",
+    "babel-plugin-macros": "^3.1.0",
+    "ts-nameof.macro": "^4.2.2",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.3",
+    "vite-plugin-babel-macros": "^1.0.6",
+    "vitest": "^3.0.9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msw"
+    ]
+  },
+  "dependencies": {
+    "@types/babel-plugin-macros": "^3.1.3"
+  }
 }
