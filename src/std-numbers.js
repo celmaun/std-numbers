@@ -66,12 +66,6 @@ function Int64(x = 0n) {
   // @ts-expect-error
   val = ((i64x2[0] = val), i64x2[0] | 0n);
 
-  const methods = {
-    Int64GetToStringTag() {
-      return 'Int64';
-    },
-  };
-
   const getSetInt64 = (...args) => {
     if (args.length === 0) return val;
     const x = args[0];
@@ -85,7 +79,7 @@ function Int64(x = 0n) {
     Object.defineProperties(getSetInt64, {
       constructor: { value: Int64 },
       name: { value: 'getSetInt64' },
-      [Symbol.toStringTag]: { get: methods.Int64GetToStringTag },
+      [Symbol.toStringTag]: { get: () => 'Int64' },
     })
   );
 }
